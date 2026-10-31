@@ -1,6 +1,6 @@
 /**
  * Shared reward + redemption data model.
- * D3 (Smart-contract Ledger) feeds rewards in; D4 (Redemptions) stores what the commuter redeems.
+ * D3 (Smart-contract Ledger) feeds rewards in; D4 (Redemptions) stores what the commuter redeems (simulated: the contract has no redeem).
  * Later analytics screens can aggregate `RedemptionRecord` and `RewardEvent` directly.
  */
 export type RedemptionStatus = "pending" | "completed" | "failed" | "simulated";
@@ -15,8 +15,8 @@ export interface RedemptionRecord {
   /** $MEV cost. */
   amount: number;
   status: RedemptionStatus;
-  /** "demo": local record, no tokens moved. "onchain": a real redeem() transaction was requested. */
-  mode: "demo" | "onchain";
+  /** Always "demo": the MissionEV contract has no redeem or burn function, so no redemption can move tokens. */
+  mode: "demo";
   createdAt: number;
   updatedAt: number;
   wallet: { address: string; chainId: number | null };
@@ -41,25 +41,32 @@ export interface RewardEvent {
   tripId?: string;
 }
 
-/** A real contract event read through the wallet's provider. */
+/** A real MissionEV event read through the wallet's provider. Amounts are exact: `amountWei` is a decimal string of 18-decimal wei. */
 export interface ChainEvent {
   id: string;
-  kind: "reward" | "redeem";
+  /** "reward": minted by a recorded commute. "transfer-out" / "transfer-in": ordinary token transfers. The contract has no redeem. */
+  kind: "reward" | "transfer-out" | "transfer-in";
   amount: number;
+  amountWei: string;
   at: number | null;
   wallet: string;
   txHash: string;
   blockNumber: number;
   co2SavedGrams?: number;
-  rewardId?: string;
+  tripId?: string;
 }
 
 export interface OnchainSnapshot {
   hasCode: boolean;
+  /** `balanceOf` in $MEV for display; the exact value is `balanceWei`. */
   balance: number | null;
+  balanceWei: string | null;
+  commuter: { carbonScore: number; streakDays: number; lastTripTimestamp: number; totalAvoidedGramsCO2: number; totalTripsLogged: number } | null;
   events: ChainEvent[] | null;
+  /** Sum of Transfer(0x0 → you): everything recorded commutes have minted to this wallet. */
   earned: number | null;
-  redeemed: number | null;
+  /** Sum of Transfer(you → anyone): tokens sent away. Not "redeemed": the contract has no redeem function. */
+  transferredOut: number | null;
   avoidedG: number | null;
   eventsError?: string;
   at: number;

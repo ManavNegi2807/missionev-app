@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { AlertTriangle, CheckCircle2, ExternalLink, FlaskConical, Link2, Loader2, Ticket, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, FlaskConical, Loader2, Ticket, XCircle } from "lucide-react";
 import { Alert, Badge, Button, KV } from "@/components/ui/primitives";
 import { Modal } from "@/components/ui/overlay";
 import { PORTAL_V3 } from "@/lib/chain";
@@ -36,7 +36,7 @@ export function RedeemModal({
   notify: (t: { tone: "ok" | "err" | "info"; title: string; text?: string }) => void;
 }) {
   const labelId = useId();
-  const { summary, onchainActive, stockLeft, redeem, redemptions } = useRewards();
+  const { summary, onchainActive, stockLeft, redeem } = useRewards();
   const wallet = useWallet();
   const { registration } = useOnboarding();
   const [phase, setPhase] = useState<Phase>("review");
@@ -52,7 +52,6 @@ export function RedeemModal({
   const address = wallet.address ?? registration?.wallet.address ?? null;
   const chainId = wallet.chainId ?? registration?.wallet.chainId ?? null;
   const live = onchainActive;
-  const pendingTx = phase === "processing" ? redemptions.find((r) => r.itemId === item.id && r.mode === "onchain" && r.status === "pending") : undefined;
 
   async function confirm() {
     setPhase("processing");
@@ -62,9 +61,7 @@ export function RedeemModal({
       setResult(rec);
       setPhase("done");
       if (rec.status === "simulated") notify({ tone: "info", title: "Demo redemption recorded", text: `${rec.itemName} · ${rec.id} (simulated — no tokens moved)` });
-      else if (rec.status === "completed") notify({ tone: "ok", title: "Redeemed on-chain", text: `${rec.itemName} · confirmed in block ${rec.blockNumber}` });
-      else if (rec.status === "failed") notify({ tone: "err", title: "Transaction failed", text: rec.error });
-      else notify({ tone: "info", title: "Transaction submitted", text: "Waiting for confirmation." });
+      else notify({ tone: "err", title: "Redemption failed", text: rec.error });
     } catch (e) {
       const msg = friendly(e);
       setError(msg);
@@ -110,19 +107,13 @@ export function RedeemModal({
             <KV label="Chain ID" mono>
               {chainId ?? "—"} <span className="text-muted">/ {PORTAL_V3.chainId}</span>
             </KV>
-            <KV label="Gas">tPOT {live ? "(paid by you)" : "(none in demo)"}</KV>
+            <KV label="Gas">None: no transaction is sent</KV>
           </dl>
 
-          {live ? (
-            <Alert tone="cyan" icon={<Link2 aria-hidden className="size-4" />} title="Real on-chain action">
-              This calls <span className="font-mono text-fg">redeem({item.cost}, “{item.id}”)</span> on the MissionEV contract and permanently burns {formatNumber(item.cost)} $MEV.
-              Your wallet will ask you to authorise it and you pay gas in tPOT. <strong className="text-fg">The benefit itself is a demo item</strong> — no partner will fulfil it.
-            </Alert>
-          ) : (
-            <Alert tone="warn" icon={<FlaskConical aria-hidden className="size-4" />} title="Demo redemption">
-              Simulated. No tokens move, no blockchain transaction is created, and the voucher is not redeemable anywhere. A local D4 record is saved in this tab.
-            </Alert>
-          )}
+          <Alert tone="warn" icon={<FlaskConical aria-hidden className="size-4" />} title="Demo redemption">
+            Simulated. The MissionEV contract has no redeem or burn function, so no tokens move and no transaction is created, and the voucher isn&apos;t redeemable anywhere.
+            {live && " Your on-chain balance is unchanged; the amount is only subtracted from what this screen offers you."} A local D4 record is saved in this tab.
+          </Alert>
 
           {insufficient && !unavailable && (
             <Alert role="alert" tone="err" icon={<AlertTriangle aria-hidden className="size-4" />} title="Insufficient $MEV balance">
@@ -145,8 +136,7 @@ export function RedeemModal({
             <div role="status" className="flex items-center gap-3 rounded-xl border border-cyan/30 bg-cyan/[0.05] p-3.5">
               <Loader2 aria-hidden className="size-5 shrink-0 animate-spin text-cyan" />
               <div className="min-w-0 text-sm">
-                <p className="text-cyan">{live ? (pendingTx ? "Waiting for the transaction receipt…" : "Waiting for wallet authorisation…") : "Recording simulated redemption…"}</p>
-                {pendingTx?.txHash && <p className="mt-1 font-mono text-[11px] break-all text-muted">{pendingTx.txHash}</p>}
+                <p className="text-cyan">Recording simulated redemption…</p>
               </div>
             </div>
           )}
@@ -156,7 +146,7 @@ export function RedeemModal({
               Cancel
             </Button>
             <Button variant="primary" data-autofocus disabled={insufficient || unavailable || busy} loading={busy} onClick={confirm}>
-              {live ? `Burn ${formatNumber(item.cost)} $MEV on-chain` : "Confirm demo redemption"}
+              Confirm demo redemption
             </Button>
           </div>
         </div>

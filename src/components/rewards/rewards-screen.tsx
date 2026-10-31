@@ -27,9 +27,9 @@ function RewardsPipeline() {
   const { isRegistered } = useOnboarding();
   const { history } = useTrip();
   const { summary } = useRewards();
-  const verified = history.some((t) => t.status === "VERIFIED" && t.emissions);
-  const confirmed = history.some((t) => t.ledger.phase === "confirmed");
-  const previewed = history.some((t) => t.ledger.phase === "previewed");
+  const verified = history.some((t) => t.status === "VERIFIED" && t.carbon);
+  const confirmed = history.some((t) => t.settlement.phase === "confirmed");
+  const previewed = history.some((t) => t.settlement.phase === "demo-credited");
   const redeemed = summary.successfulRedemptions > 0;
 
   const raw: Array<StageState | "open"> = [
@@ -74,7 +74,7 @@ export function RewardsScreen() {
           <Wallet aria-hidden className="size-4 shrink-0 text-cyan" />
           {wallet.isConnected ? (
             <>
-              <span className="text-muted">Connected wallet</span>
+              <span className="text-muted">Optional wallet</span>
               <span className="font-mono text-fg" data-testid="wallet-chip">
                 {shortAddress(wallet.address)}
               </span>
@@ -84,7 +84,9 @@ export function RewardsScreen() {
               {!wallet.isDemo && !wallet.onExpectedChain && <Badge tone="warn">Wrong network</Badge>}
             </>
           ) : (
-            <span className="text-muted">No wallet connected — use the header button or demo mode on Screen 01 for real reads.</span>
+            <span className="text-muted">
+              No wallet needed: rewards are tracked on your demo account. Connect a wallet from the account menu only to read a real $MEV balance or redeem on-chain.
+            </span>
           )}
         </div>
       </div>
@@ -94,14 +96,14 @@ export function RewardsScreen() {
           role="alert"
           tone="warn"
           icon={<Lock aria-hidden className="size-4" />}
-          title="Registration required"
+          title="Sign-in required"
           actions={
             <Link href="/register" className="inline-flex h-8 items-center gap-2 rounded-lg bg-lime px-3 font-mono text-xs tracking-[0.1em] text-bg uppercase hover:shadow-glow-lime">
               <ArrowLeft aria-hidden className="size-3.5" /> Go to Sign-in &amp; Register
             </Link>
           }
         >
-          Rewards belong to a wallet and a verified vehicle. Complete Screen 01 first (demo mode works).
+          Rewards belong to your account. Sign in with your mobile number on Screen 01 first (the demo OTP works).
         </Alert>
       ) : (
         <>

@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "MissionEV · CarbonCoin Protocol",
-  description: "Decentralized EV carbon tracking and CarbonCoin rewards. Sign in with your wallet and register your vehicle.",
+  description: "Decentralized EV carbon tracking and CarbonCoin rewards. Sign in with your mobile number and set your vehicle.",
 };
 
 export const viewport: Viewport = {

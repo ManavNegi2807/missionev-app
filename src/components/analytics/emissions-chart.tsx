@@ -8,9 +8,9 @@ import type { EmissionPoint } from "@/lib/analytics/selectors";
 import { C, ChartTip, EmptyState, LegendToggles, SourceBadge, TipRow, useReducedMotion, type LegendItem, type SourceKind } from "./chart-kit";
 
 const SERIES: LegendItem[] = [
-  { key: "baselineKg", label: "Estimated baseline", color: C.muted, dashed: true, hint: "Same distance on an average petrol two-wheeler (Journey Lab baseline)" },
+  { key: "baselineKg", label: "Estimated baseline", color: C.muted, dashed: true, hint: "Same distance on the reference petrol vehicle (a MissionEV assumption)" },
   { key: "actualKg", label: "Estimated actual", color: C.cyan, hint: "Tailpipe + electricity-generation emissions of the modes used" },
-  { key: "avoidedKg", label: "Estimated avoided", color: C.lime, hint: "Journey Lab saving: only journeys below baseline count" },
+  { key: "avoidedKg", label: "Estimated avoided", color: C.lime, hint: "Only journeys below the reference count" },
 ];
 
 const kgText = (n: number) => `${formatNumber(n, n < 10 ? 3 : 1)} kg CO₂e`;
@@ -69,7 +69,7 @@ export function EmissionsChart({ data, source, scopeNote, bucketNote, onReset }:
             </ResponsiveContainer>
           </div>
           <p className="text-xs leading-relaxed text-muted">
-            Avoided emissions follow the Journey Lab rule — only journeys below the petrol-bike baseline count — so baseline minus actual can be larger or smaller than the avoided line. All values are estimates; nothing here is a certified carbon-credit issuance.
+            Avoided emissions count only journeys below their reference journey, floored to whole grams, so baseline minus actual can be larger or smaller than the avoided line. All values are estimates; nothing here is a certified carbon-credit issuance.
           </p>
         </div>
       )}

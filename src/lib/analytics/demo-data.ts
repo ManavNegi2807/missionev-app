@@ -1,6 +1,5 @@
 import { fnv1a } from "@/lib/format";
 import { CATALOG } from "@/lib/rewards/catalog";
-import type { ContractTier } from "@/lib/trip/types";
 import { journeyImpact, type VehicleVariant } from "./impact";
 import { MODE_IDS, type ModeId } from "./modes";
 import { addDays, DAY_MS, weekdayIndex } from "./time";
@@ -129,21 +128,18 @@ export function generateDemo(today: number): DemoData {
 
       const legs = r() < 0.72 ? 2 : 1;
       let mode = pickMode(c.weights, r);
-      let tokensToday = 0;
       for (let leg = 0; leg < legs; leg++) {
         if (leg > 0 && r() > 0.85) mode = pickMode(c.weights, r);
         const variant: VehicleVariant | undefined = mode === "ev" ? c.evVariant : mode === "petrol" ? c.petrolVariant : mode === "diesel" ? "diesel-suv" : undefined;
         const [lo, hi] = DISTANCE[variant ?? mode];
         const distanceKm = Math.round((lo + r() * (hi - lo)) * 10) / 10;
         const verified = r() > 0.06;
-        const tier: ContractTier = mode === "ev" && r() < 0.88 ? "Gold" : "Silver";
         const id = `${c.key}-${epoch}-${leg}`;
         if (!verified) {
           journeys.push({ id, day, userKey: c.key, mode, distanceKm, baselineG: 0, actualG: 0, avoidedG: 0, verified: false, tokens: 0, origin: "demo" });
           continue;
         }
-        const impact = journeyImpact({ mode, variant, distanceKm, tier, tokensAlreadyToday: tokensToday });
-        tokensToday += impact.tokens;
+        const impact = journeyImpact({ mode, variant, distanceKm });
         journeys.push({ id, day, userKey: c.key, mode, distanceKm, ...impact, verified: true, origin: "demo" });
         if (impact.tokens > 0) {
           // Today's journeys are "pending" (not recorded on the ledger yet); older ones are earned.

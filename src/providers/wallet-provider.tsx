@@ -72,6 +72,16 @@ export interface WalletContextValue {
 
 const WalletContext = createContext<WalletContextValue | null>(null);
 
+const CONNECTED_FLAG = "missionev:wallet:connected";
+const setConnectedFlag = (on: boolean) => {
+  try {
+    if (on) sessionStorage.setItem(CONNECTED_FLAG, "1");
+    else sessionStorage.removeItem(CONNECTED_FLAG);
+  } catch {
+    /* storage blocked: the wallet just won't be restored after a reload */
+  }
+};
+
 function pickProvider(): EthereumProvider | null {
   if (typeof window === "undefined" || !window.ethereum) return null;
   const eth = window.ethereum;
@@ -116,6 +126,39 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setChainId(null);
     setConnectedAt(null);
   }, []);
+
+  /**
+   * A page reload drops React state but not the wallet's own authorization. If this tab had connected a wallet (and the
+   * commuter hasn't disconnected it), re-attach silently with `eth_accounts`, which never opens a prompt.
+   */
+  useEffect(() => {
+    if (!hasInjected || mode !== "none") return;
+    let was = false;
+    try {
+      was = sessionStorage.getItem(CONNECTED_FLAG) === "1";
+    } catch {
+      /* storage blocked */
+    }
+    const provider = pickProvider();
+    if (!was || !provider) return;
+    let cancelled = false;
+    void (async () => {
+      const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
+      if (cancelled || !accounts?.length) return;
+      const chain = parseChainId(await provider.request({ method: "eth_chainId" }));
+      if (cancelled) return;
+      providerRef.current = provider;
+      setAddress(accounts[0]);
+      setChainId(chain);
+      setConnectedAt(Date.now());
+      setMode("browser");
+    })().catch(() => {
+      /* stay disconnected; the commuter can connect again */
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasInjected, mode]);
 
   /* Live account / chain updates while a browser wallet is connected. */
   useEffect(() => {
@@ -169,6 +212,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setChainId(chain);
       setConnectedAt(Date.now());
       setMode("browser");
+      setConnectedFlag(true);
     } catch (e) {
       const code = rpcCode(e);
       if (code === 4001) {
@@ -186,6 +230,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const disconnect = useCallback(async () => {
     const provider = providerRef.current;
     const wasBrowser = mode === "browser";
+    setConnectedFlag(false);
     reset();
     setError(null);
     if (wasBrowser && provider) {

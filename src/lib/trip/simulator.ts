@@ -1,7 +1,7 @@
 import { fnv1a } from "@/lib/format";
-import type { VehicleCategory } from "@/lib/vehicle";
 import { offsetRight, pointAtKm } from "./geo";
 import type { DemoRoute } from "./demo-routes";
+import type { SpeedClass } from "./travel";
 import type { GpsSample, Scenario } from "./types";
 
 /** Simulated seconds that pass per real second while a demo trip runs. */
@@ -13,17 +13,17 @@ export function noise(seed: number, i: number): number {
   return x - Math.floor(x) - 0.5;
 }
 
-const BASE_SPEED: Record<VehicleCategory, number> = {
-  "Two-wheeler": 26,
-  "Electric two-wheeler": 24,
-  "Four-wheeler": 30,
-  "Electric car": 30,
-  Commercial: 22,
+const BASE_SPEED: Record<SpeedClass, number> = {
+  two_wheeler: 26,
+  car: 30,
+  metro: 42,
+  ebus: 20,
+  active: 6,
 };
 
-/** Simulated speed (km/h): ramps up from rest, dips at "signals", with smooth deterministic variation. */
-export function simSpeedKmh(category: VehicleCategory, seed: number, progressKm: number, lengthKm: number): number {
-  const base = BASE_SPEED[category];
+/** Simulated speed (km/h): ramps up from rest, dips at "signals" (stations / junctions), with smooth deterministic variation. */
+export function simSpeedKmh(speedClass: SpeedClass, seed: number, progressKm: number, lengthKm: number): number {
+  const base = BASE_SPEED[speedClass];
   const ramp = Math.min(1, 0.3 + 0.7 * Math.min(progressKm / 0.4, (lengthKm - progressKm) / 0.4));
   const z = ((progressKm % 1.9) - 1.5) / 0.09;
   const signal = 1 - 0.82 * Math.exp(-(z * z));

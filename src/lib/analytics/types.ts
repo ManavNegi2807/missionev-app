@@ -6,8 +6,8 @@ import type { ModeId } from "./modes";
  *
  * Definitions (single source of truth — see lib/analytics/definitions.ts):
  *  - Verified journey: trip with status VERIFIED and an emission result. All impact aggregates count verified journeys only.
- *  - Avoided emissions: Journey Lab rule — saving vs the petrol-bike baseline, counted only when below baseline, floored to whole grams.
- *  - Reward earned: tokens of verified journeys whose on-chain record was previewed/confirmed (+ demo top-ups). Pending = verified, not recorded yet.
+ *  - Avoided emissions: saving vs the reference journey (src/lib/carbon), counted only when below it, floored to whole grams.
+ *  - Reward earned: $MEV of verified journeys confirmed on-chain or credited in the demo (+ demo top-ups). Pending = verified, not recorded yet.
  */
 export type Origin = "demo" | "session" | "onchain";
 
@@ -23,7 +23,7 @@ export interface Journey {
   actualG: number;
   avoidedG: number;
   verified: boolean;
-  /** Tokens this journey is worth under the contract rules (after trust tier + daily cap). */
+  /** $MEV this journey is worth under the contract's formula (a preview unless confirmed on-chain); 0 when not rewarded. */
   tokens: number;
   origin: Exclude<Origin, "onchain">;
   /** Session journeys only: whether the trip came from a simulator. */

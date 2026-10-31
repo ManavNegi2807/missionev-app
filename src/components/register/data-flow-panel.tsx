@@ -1,4 +1,4 @@
-import { ArrowDown, Database, Link2, Smartphone, UserRound, Wallet } from "lucide-react";
+import { ArrowDown, Database, MessageSquareText, Smartphone, UserRound } from "lucide-react";
 import { Badge, Panel, PanelHeader } from "@/components/ui/primitives";
 
 /** Compact view of process 1.0 from the Build with Bharat data-flow diagram. */
@@ -22,13 +22,12 @@ export function DataFlowPanel() {
     <Panel aria-labelledby="flow-title">
       <PanelHeader id="flow-title" eyebrow="Data flow" title="1.0 Sign-in & Register" />
       <div className="p-4 sm:p-6">
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <Node icon={<UserRound className="size-4" />} title="Commuter" note="External entity · enters wallet + vehicle" />
-          <Node icon={<Wallet className="size-4" />} title="Portal wallet" note="External entity · identity & network" />
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <Node icon={<UserRound className="size-4" />} title="Commuter" note="External entity · mobile number, vehicles, efficiency" />
           <Node
-            icon={<Link2 className="size-4" />}
-            title="Vahan / vehicle registry"
-            note="External entity · RC lookup"
+            icon={<MessageSquareText className="size-4" />}
+            title="OTP service"
+            note="External entity · one-time password"
             badge={<Badge tone="warn">Demo</Badge>}
           />
           <Node
@@ -47,7 +46,7 @@ export function DataFlowPanel() {
           </span>
           <div className="min-w-0">
             <p className="font-mono text-xs tracking-wider text-lime">D1 — USERS &amp; VEHICLES</p>
-            <p className="text-xs text-muted">Frontend state · masked registration only</p>
+            <p className="text-xs text-muted">Frontend state · masked mobile number and your transport profile only</p>
           </div>
         </div>
       </div>

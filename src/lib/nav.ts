@@ -2,7 +2,7 @@ export interface NavItem {
   step: string;
   label: string;
   href: string;
-  /** Screen requires a completed registration (process 1.0). */
+  /** Screen requires a signed-in account (process 1.0). */
   requiresRegistration: boolean;
 }
 

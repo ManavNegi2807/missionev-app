@@ -68,7 +68,7 @@ export function Sidebar({
                   href={item.href}
                   onClick={onNavigate}
                   aria-current={isActive ? "page" : undefined}
-                  aria-label={collapsed ? `${item.step} ${item.label}${locked ? " (locked until registered)" : ""}` : undefined}
+                  aria-label={collapsed ? `${item.step} ${item.label}${locked ? " (locked until signed in)" : ""}` : undefined}
                   title={collapsed ? `${item.step} — ${item.label}` : undefined}
                   className={cn(
                     "group relative flex items-center gap-2.5 rounded-lg py-2.5 transition",
@@ -91,7 +91,7 @@ export function Sidebar({
                   {!collapsed && (
                     <>
                       <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{item.label}</span>
-                      {locked && <Lock aria-label="Locked until registration is complete" className="size-3.5 shrink-0 text-muted/70" />}
+                      {locked && <Lock aria-label="Locked until you sign in" className="size-3.5 shrink-0 text-muted/70" />}
                     </>
                   )}
                 </Link>

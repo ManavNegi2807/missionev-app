@@ -1,8 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
-import { ExternalLink, FlaskConical, RefreshCw, Ticket } from "lucide-react";
-import { Alert, Badge, Button, KV } from "@/components/ui/primitives";
+import { useId } from "react";
+import { ExternalLink, FlaskConical, Ticket } from "lucide-react";
+import { Alert, Badge, KV } from "@/components/ui/primitives";
 import { Drawer } from "@/components/ui/overlay";
 import { PORTAL_V3 } from "@/lib/chain";
 import { formatNumber, shortAddress } from "@/lib/format";
@@ -13,8 +13,7 @@ const stamp = (ms: number) => new Date(ms).toLocaleString();
 
 export function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const labelId = useId();
-  const { redemptions, recheckRecord } = useRewards();
-  const [busy, setBusy] = useState(false);
+  const { redemptions } = useRewards();
   const r = redemptions.find((x) => x.id === id);
   const link = r?.txHash && PORTAL_V3.explorerUrl ? `${PORTAL_V3.explorerUrl.replace(/\/$/, "")}/tx/${r.txHash}` : null;
 
@@ -28,7 +27,7 @@ export function DetailDrawer({ id, onClose }: { id: string; onClose: () => void 
             <Badge tone={STATUS_TONE[r.status]} dot>
               {recordLabel(r.status)}
             </Badge>
-            <Badge tone={r.mode === "demo" ? "warn" : "ok"}>{r.mode === "demo" ? "Demo · simulated" : "On-chain redeem()"}</Badge>
+            <Badge tone="warn">Demo · simulated</Badge>
           </div>
 
           <div>
@@ -94,22 +93,6 @@ export function DetailDrawer({ id, onClose }: { id: string; onClose: () => void 
             </div>
           )}
 
-          {r.status === "pending" && r.mode === "onchain" && (
-            <Button
-              loading={busy}
-              icon={<RefreshCw aria-hidden className="size-4" />}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await recheckRecord(r.id);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Check receipt
-            </Button>
-          )}
         </div>
       )}
     </Drawer>

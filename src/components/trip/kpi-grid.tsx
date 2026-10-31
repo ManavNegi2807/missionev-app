@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Activity, BadgeCheck, Car, Clock, Gauge, Leaf, Navigation, Satellite } from "lucide-react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { cn, formatDuration } from "@/lib/format";
-import { useOnboarding } from "@/providers/onboarding-provider";
+import { TRAVEL_LABEL } from "@/lib/trip/travel";
 import { useTrip, type GpsSignal } from "@/providers/trip-provider";
 
 function Kpi({
@@ -53,8 +53,7 @@ const SIGNAL: Record<GpsSignal, { text: string; tone: "muted" | "ok" | "cyan" | 
 };
 
 export function KpiGrid() {
-  const { status, live, record, gps, verify, setup } = useTrip();
-  const { registration } = useOnboarding();
+  const { status, live, record, gps, verify, setup, selection } = useTrip();
 
   const frozen = record;
   const simulated = (frozen?.source ?? setup.source) === "simulated";
@@ -63,8 +62,11 @@ export function KpiGrid() {
   const avg = frozen?.avgSpeedKmh ?? (durationSec > 0 ? distanceKm / (durationSec / 3600) : 0);
   const sig = SIGNAL[gps.signal];
   const trust = verify.trust ?? frozen?.verification?.trust ?? null;
-  const emissions = frozen?.emissions ?? null;
-  const v = registration?.vehicle;
+  const carbon = frozen?.carbon ?? null;
+  // A finished trip shows the vehicle it used; before that, the vehicle the next trip would use.
+  const travelMode = frozen?.mode ?? setup.mode;
+  const v = frozen ? frozen.vehicle : selection.vehicle;
+  const efficiency = v ? (v.spec.powertrain === "electric" ? `${((v.spec.consumptionKWhPerKm ?? 0) * 100).toFixed(1)} kWh/100 km` : `${v.spec.mileageKmPerUnit} ${v.spec.powertrain === "cng" ? "km/kg" : "km/l"}`) : "";
 
   return (
     <section aria-label="Live telemetry" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -85,11 +87,15 @@ export function KpiGrid() {
       >
         <span className="text-base sm:text-lg">{sig.text}</span>
       </Kpi>
-      <Kpi label="Transport mode" icon={<Activity className="size-4" />} sub="declared from registration">
-        <span className="text-base sm:text-lg">{v ? v.category : "—"}</span>
+      <Kpi label="Transport mode" icon={<Activity className="size-4" />} sub={frozen ? "this journey" : "chosen on this screen"}>
+        <span className="text-base sm:text-lg">{TRAVEL_LABEL[travelMode]}</span>
       </Kpi>
-      <Kpi label="Vehicle ID" icon={<Car className="size-4" />} sub={v ? `${v.manufacturer} ${v.model} · ${v.fuel}` : undefined}>
-        <span className="text-base sm:text-lg">{v?.maskedReg ?? "—"}</span>
+      <Kpi
+        label="Vehicle"
+        icon={<Car className="size-4" />}
+        sub={v ? `${v.spec.powertrain} · ${efficiency}` : "no private vehicle on this trip"}
+      >
+        <span className="text-base sm:text-lg">{v?.label ?? "—"}</span>
       </Kpi>
       <Kpi
         label="Trust level"
@@ -101,12 +107,12 @@ export function KpiGrid() {
       </Kpi>
       <Kpi
         label="Est. emissions"
-        unit={emissions ? "g CO₂e" : undefined}
+        unit={carbon ? "g CO₂e" : undefined}
         icon={<Leaf className="size-4" />}
-        tone={emissions ? "cyan" : "muted"}
-        sub={emissions ? (emissions.isDemo ? "illustrative · DEMO" : "illustrative") : "calculated after verification"}
+        tone={carbon ? "cyan" : "muted"}
+        sub={carbon ? `${carbon.confidence} confidence · ${frozen?.settlement.applicationMode ?? "DEMO"}` : "calculated after verification"}
       >
-        {emissions ? <AnimatedNumber value={emissions.estimatedG} decimals={1} /> : "—"}
+        {carbon ? <AnimatedNumber value={carbon.actual.grams} decimals={1} /> : "—"}
       </Kpi>
     </section>
   );

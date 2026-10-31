@@ -1,29 +1,32 @@
+import { mevNumber } from "@/lib/contract/client";
 import type { ChainEvent, RedemptionRecord, RewardEvent } from "@/lib/rewards/types";
 import type { TripRecord } from "@/lib/trip/types";
 import { COVERAGE_DAYS, generateDemo } from "./demo-data";
-import { modeFromVehicle } from "./modes";
+import { modeOfTrip } from "./modes";
 import { addDays, dayStart } from "./time";
 import type { AnalyticsDataset, Commuter, Journey, RewardFact } from "./types";
 
 export const YOU: Commuter = { key: "you", alias: "You", archetype: "This browser session", isYou: true, isDemo: false };
 
-const recorded = (t: TripRecord) => t.ledger.phase === "previewed" || t.ledger.phase === "confirmed";
+const recorded = (t: TripRecord) => t.settlement.phase === "demo-credited" || t.settlement.phase === "confirmed";
+/** $MEV this trip is worth: the demo credit, the exact on-chain mint, or the contract-formula preview while it is pending. */
+const tripTokens = (t: TripRecord) => (t.settlement.demo?.creditedMev ?? (t.settlement.onchain ? mevNumber(t.settlement.onchain.mintedWei) : (t.settlement.preview?.rewardMev ?? 0)));
 
 /** D2 → analytics. Same fields Screen 02 / 03 read, so totals reconcile exactly. */
 export function journeyFromTrip(t: TripRecord): Journey {
-  const verified = t.status === "VERIFIED" && !!t.emissions;
-  const e = verified ? t.emissions! : null;
+  const verified = t.status === "VERIFIED" && !!t.carbon;
+  const e = verified ? t.carbon! : null;
   return {
     id: t.id,
     day: dayStart(t.endedAt),
     userKey: YOU.key,
-    mode: modeFromVehicle(t.vehicle.category, t.vehicle.fuel),
+    mode: modeOfTrip(t),
     distanceKm: t.distanceKm,
-    baselineG: e?.baselineG ?? 0,
-    actualG: e?.estimatedG ?? 0,
-    avoidedG: e?.savedG ?? 0,
+    baselineG: e?.baseline.grams ?? 0,
+    actualG: e?.actual.grams ?? 0,
+    avoidedG: e?.co2AvoidedGrams ?? 0,
     verified,
-    tokens: e?.tokens ?? 0,
+    tokens: e?.reward.eligible ? tripTokens(t) : 0,
     origin: "session",
     simulated: t.isSimulated,
   };
@@ -54,19 +57,20 @@ export function buildDataset(input: DatasetInput): AnalyticsDataset {
   if (onchain) {
     // Real events replace the local approximation of this wallet's rewards.
     for (const e of input.chainEvents!) {
-      if (e.at === null) continue;
-      youRewards.push({ id: e.id, day: dayStart(e.at), userKey: YOU.key, kind: e.kind === "reward" ? "earned" : "redeemed", amount: e.amount, origin: "onchain", label: e.kind === "redeem" ? e.rewardId : undefined });
+      // Only mints count as "earned". Plain transfers aren't redemptions (the contract has none) and are left out.
+      if (e.at === null || e.kind !== "reward") continue;
+      youRewards.push({ id: e.id, day: dayStart(e.at), userKey: YOU.key, kind: "earned", amount: e.amount, origin: "onchain" });
     }
   } else {
     for (const t of mine) {
-      if (t.status !== "VERIFIED" || !t.emissions || t.emissions.tokens <= 0) continue;
+      if (t.status !== "VERIFIED" || !t.carbon?.reward.eligible || tripTokens(t) <= 0) continue;
       youRewards.push({
         id: `${t.id}-r`,
         day: dayStart(t.endedAt),
         userKey: YOU.key,
         kind: recorded(t) ? "earned" : "pending",
-        amount: t.emissions.tokens,
-        mode: modeFromVehicle(t.vehicle.category, t.vehicle.fuel),
+        amount: tripTokens(t),
+        mode: modeOfTrip(t),
         origin: "session",
       });
     }
@@ -82,8 +86,8 @@ export function buildDataset(input: DatasetInput): AnalyticsDataset {
   // Pending on-chain-mode trips still come from local trips (verified, not yet recorded).
   if (onchain) {
     for (const t of mine) {
-      if (t.status === "VERIFIED" && t.emissions && t.emissions.tokens > 0 && !recorded(t)) {
-        youRewards.push({ id: `${t.id}-p`, day: dayStart(t.endedAt), userKey: YOU.key, kind: "pending", amount: t.emissions.tokens, mode: modeFromVehicle(t.vehicle.category, t.vehicle.fuel), origin: "session" });
+      if (t.status === "VERIFIED" && t.carbon?.reward.eligible && tripTokens(t) > 0 && !recorded(t)) {
+        youRewards.push({ id: `${t.id}-p`, day: dayStart(t.endedAt), userKey: YOU.key, kind: "pending", amount: tripTokens(t), mode: modeOfTrip(t), origin: "session" });
       }
     }
   }

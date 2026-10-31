@@ -11,22 +11,40 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { keccak256, toHex } from "viem";
+import { loadStatus, postJson } from "@/lib/api/client";
+import { calculateJourney, JourneyInputError } from "@/lib/carbon/emissionsEngine";
+import { mevNumber, mintedInReceipt, readCommuterOnChain, readNonce, sendRecordCommute, waitForReceipt } from "@/lib/contract/client";
+import { CONTRACT, isContractAddress } from "@/lib/contract/config";
+import { PORTAL_V3 } from "@/lib/chain";
+import { oracleRequestMessage } from "@/lib/oracle/walletProof";
+import { previewReward, streakAfterTrip } from "@/lib/carbon/rewardPreview";
+import type { CarbonResult } from "@/lib/carbon/types";
 import { createSessionStore } from "@/lib/session-store";
 import { downsample, haversineKm } from "@/lib/trip/geo";
 import { DEMO_ROUTES, getRoute, type DemoRoute } from "@/lib/trip/demo-routes";
-import { calculateEmissions } from "@/lib/trip/emissions";
-import { buildLedgerPreview } from "@/lib/trip/ledger";
 import { transition, type TripEvent } from "@/lib/trip/machine";
 import { SIM_SCALE, seedFromId, simSample, simSpeedKmh } from "@/lib/trip/simulator";
-import type { CheckId, CheckResult, GpsSample, Scenario, TripRecord, TripSource, TripStatus, TrustResult } from "@/lib/trip/types";import {
-  assignTrust,
-  checkMotion,
-  checkRideLog,
-  checkRoute,
-  checkVehicle,
-  fingerprintOf,
-  type VerifyContext,
-} from "@/lib/trip/verification";
+import { TRAVEL_LABEL, isPrivateMode, speedClassOf } from "@/lib/trip/travel";
+import {
+  NOT_STARTED,
+  type ApplicationMode,
+  type CheckId,
+  type CheckResult,
+  type GpsSample,
+  type Scenario,
+  type Settlement,
+  type SignedTrip,
+  type TravelMode,
+  type TripRecord,
+  type TripSource,
+  type TripStatus,
+  type TripVehicle,
+  type TrustResult,
+} from "@/lib/trip/types";
+import { assignTrust, checkMotion, checkRideLog, checkRoute, checkVehicle, fingerprintOf, type VerifyContext } from "@/lib/trip/verification";
+import { vehicleSpecOf, vehiclesForJourney, type TransportProfile } from "@/lib/transport/profile";
+import { EMPTY_RIDE, resolveRideHail, type RideHailForm } from "@/lib/transport/rideHail";
 import { useOnboarding } from "./onboarding-provider";
 import { useWallet } from "./wallet-provider";
 
@@ -36,6 +54,12 @@ export interface TripSetup {
   source: TripSource;
   routeId: string;
   scenario: Scenario;
+  /** How the commuter is travelling on THIS journey. Chosen per trip; never inferred from what they own. */
+  mode: TravelMode;
+  /** The saved vehicle for a private journey. null = the first matching one. */
+  vehicleId: string | null;
+  /** Ride-hail receipt details and the vehicle the commuter confirmed. */
+  ride: RideHailForm;
 }
 
 export type GpsSignal = "idle" | "requesting" | "strong" | "good" | "weak" | "poor" | "denied" | "unavailable" | "simulated";
@@ -101,11 +125,45 @@ const persistable = (r: TripRecord): TripRecord => {
   delete copy.path;
   return copy;
 };
+/** Trips saved by an older build (before per-journey transport and settlement) have a different shape; they are ignored rather than half-read. */
+const isCurrentTrip = (t: TripRecord) => typeof t.mode === "string" && typeof t.settlement === "object" && t.settlement !== null;
+
+/** Which vehicle (if any) a journey will use, and why a journey can't start yet. */
+function resolveSelection(setup: TripSetup, transport: TransportProfile | null): { vehicle: TripVehicle | null; blocked: string | null } {
+  if (setup.mode === "ride_hail") {
+    const r = resolveRideHail(setup.ride);
+    if (!r.vehicle) return { vehicle: null, blocked: "Add the ride's details from your receipt (or enter them by hand), then confirm the vehicle and fuel." };
+    if (!setup.ride.confirmed) return { vehicle: r.vehicle, blocked: "Confirm the ride details. A receipt can't prove the vehicle or its fuel, so you have the last word." };
+    return { vehicle: r.vehicle, blocked: null };
+  }
+  if (!isPrivateMode(setup.mode)) return { vehicle: null, blocked: null };
+  const options = vehiclesForJourney(transport, setup.mode);
+  const chosen = options.find((v) => v.id === setup.vehicleId) ?? options[0];
+  if (!chosen) return { vehicle: null, blocked: `No ${TRAVEL_LABEL[setup.mode].toLowerCase()} in your transport profile. Add one on Screen 01, or choose another way you travelled.` };
+  return { vehicle: { id: chosen.id, label: [chosen.manufacturer, chosen.model, chosen.variant].filter(Boolean).join(" "), spec: vehicleSpecOf(chosen) }, blocked: null };
+}
+
+/** The contract's streak state as the demo would have it, replaying this tab's demo-credited trips in order. */
+function demoCommuterState(history: TripRecord[]) {
+  let streakDays = 0;
+  let lastTripTimestamp = 0;
+  for (const t of history.filter((h) => h.settlement.phase === "demo-credited").sort((a, b) => a.endedAt - b.endedAt)) {
+    const sec = Math.floor(t.endedAt / 1000);
+    streakDays = streakAfterTrip({ streakDays, lastTripTimestamp }, sec);
+    lastTripTimestamp = sec;
+  }
+  return { streakDays, lastTripTimestamp };
+}
+
+const rpcCode = (e: unknown): number | undefined => (typeof e === "object" && e !== null && "code" in e ? Number((e as { code: unknown }).code) : undefined);
 
 interface TripContextValue {
   status: TripStatus;
   setup: TripSetup;
   setSetup(patch: Partial<TripSetup>): void;
+  setRide(patch: Partial<RideHailForm>): void;
+  /** The vehicle the current setup resolves to, and why a trip can't start yet (null = ready). */
+  selection: { vehicle: TripVehicle | null; blocked: string | null };
   route: DemoRoute;
   gps: { signal: GpsSignal; message: string | null };
   live: LiveTrip;
@@ -122,7 +180,12 @@ interface TripContextValue {
   verifyTrip(): Promise<void>;
   reset(): void;
   clearHistory(): void;
-  previewLedger(): Promise<void>;
+  /** DEMO: credit the previewed reward in this browser only. Nothing is minted. */
+  claimDemo(): void;
+  /** LIVE: ask the oracle to verify and sign this journey (the wallet signs a free proof message first). */
+  requestSignature(): Promise<void>;
+  /** LIVE: send `recordCommute` from the commuter's own wallet with the oracle's signature. */
+  submitOnChain(): Promise<void>;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);
@@ -134,10 +197,14 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000;
 export function TripProvider({ children }: { children: ReactNode }) {
   const { registration } = useOnboarding();
   const wallet = useWallet();
-  const history = useSyncExternalStore(historyStore.subscribe, historyStore.getSnapshot, historyStore.getServerSnapshot);
+  const storedHistory = useSyncExternalStore(historyStore.subscribe, historyStore.getSnapshot, historyStore.getServerSnapshot);
+  const history = useMemo(() => storedHistory.filter(isCurrentTrip), [storedHistory]);
 
   const [status, setStatus] = useState<TripStatus>("IDLE");
-  const [setup, setSetupState] = useState<TripSetup>({ source: "gps", routeId: DEMO_ROUTES[0].id, scenario: "clean" });
+  const [chosen, setSetupState] = useState<TripSetup>({ source: "gps", routeId: DEMO_ROUTES[0].id, scenario: "clean", mode: "metro", vehicleId: null, ride: EMPTY_RIDE });
+  const setup = chosen;
+  const transport = registration?.transport ?? null;
+  const selection = useMemo(() => resolveSelection(setup, transport), [setup, transport]);
   const [gps, setGps] = useState<{ signal: GpsSignal; message: string | null }>({ signal: "idle", message: null });
   const [live, setLive] = useState<LiveTrip>(EMPTY_LIVE);
   const [record, setRecord] = useState<TripRecord | null>(null);
@@ -147,6 +214,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   // Mutable mirrors so timers / geolocation callbacks never read stale state.
   const statusRef = useRef<TripStatus>("IDLE");
   const setupRef = useRef(setup);
+  const selectionRef = useRef(selection);
   const liveRef = useRef<LiveTrip>(EMPTY_LIVE);
   const recordRef = useRef<TripRecord | null>(null);
   const registrationRef = useRef(registration);
@@ -158,6 +226,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setupRef.current = setup;
+    selectionRef.current = selection;
     registrationRef.current = registration;
     walletRef.current = wallet;
     historyRef.current = history;
@@ -185,6 +254,16 @@ export function TripProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setRide = useCallback((patch: Partial<RideHailForm>) => {
+    if (statusRef.current !== "IDLE") return;
+    setSetupState((s) => {
+      // Editing any detail withdraws the confirmation: the commuter confirms what is on screen now.
+      const next = { ...s, ride: { ...s.ride, ...patch, ...("confirmed" in patch ? {} : { confirmed: false }) } };
+      setupRef.current = next;
+      return next;
+    });
+  }, []);
+
   /* ------------------------------ lifecycle actions ------------------------------ */
   const begin = useCallback(
     (makeFirst: (tripId: string, startedAt: number) => GpsSample) => {
@@ -204,7 +283,13 @@ export function TripProvider({ children }: { children: ReactNode }) {
     async (override?: Partial<TripSetup>) => {
       if (statusRef.current !== "IDLE" || startingRef.current || !registrationRef.current) return;
       const s = { ...setupRef.current, ...override };
+      const sel = resolveSelection(s, registrationRef.current.transport);
+      if (sel.blocked) {
+        setNotice({ tone: "warn", text: sel.blocked });
+        return;
+      }
       setupRef.current = s;
+      selectionRef.current = sel;
       setSetupState(s);
       setNotice(null);
 
@@ -272,15 +357,18 @@ export function TripProvider({ children }: { children: ReactNode }) {
     if (!reg || !l.tripId || !l.startedAt) return;
     if (!fire("STOP")) return;
     const s = setupRef.current;
+    const sel = selectionRef.current;
     const w = walletRef.current;
     const durationSec = s.source === "gps" ? l.activeMs / 1000 : l.simSec;
     const samples = l.samples;
     const first = samples[0];
     const last = samples[samples.length - 1];
+    const ride = s.mode === "ride_hail" ? resolveRideHail(s.ride) : null;
     const rec: TripRecord = {
       id: l.tripId,
       status: "COMPLETED",
       source: s.source,
+      mode: s.mode,
       isSimulated: s.source === "simulated",
       scenario: s.scenario,
       routeId: s.source === "simulated" ? s.routeId : null,
@@ -296,14 +384,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
       end: last ? { lat: round3(last.lat), lng: round3(last.lng) } : { lat: 0, lng: 0 },
       speedProfile: downsample(samples.map((p) => Math.round(p.speedKmh * 10) / 10), 40),
       fingerprint: fingerprintOf(samples),
+      routeDigest: "",
       salt: Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join(""),
-      vehicle: {
-        maskedReg: reg.vehicle.maskedReg,
-        category: reg.vehicle.category,
-        fuel: reg.vehicle.fuel,
-        manufacturer: reg.vehicle.manufacturer,
-        model: reg.vehicle.model,
-      },
+      vehicle: sel.vehicle,
+      rideHail: ride?.info ?? null,
       wallet: {
         address: w.address ?? reg.wallet.address,
         chainId: w.chainId ?? reg.wallet.chainId,
@@ -311,8 +395,8 @@ export function TripProvider({ children }: { children: ReactNode }) {
       },
       userId: reg.userId,
       verification: null,
-      emissions: null,
-      ledger: { phase: "not-submitted" },
+      carbon: null,
+      settlement: NOT_STARTED,
       path: downsample(samples.map((p) => ({ lat: p.lat, lng: p.lng })), 160),
     };
     recordRef.current = rec;
@@ -324,6 +408,25 @@ export function TripProvider({ children }: { children: ReactNode }) {
     historyStore.set([persistable(rec), ...others].slice(0, 20));
   }, []);
 
+  /** Replace the current record, mirror it to state and (when it has been verified) to history. */
+  const commit = useCallback(
+    (next: TripRecord) => {
+      recordRef.current = next;
+      setRecord(next);
+      if (next.status === "VERIFIED" || next.status === "FAILED") persist(next);
+    },
+    [persist],
+  );
+
+  const patchSettlement = useCallback(
+    (patch: Partial<Settlement>) => {
+      const rec = recordRef.current;
+      if (!rec) return;
+      commit({ ...rec, settlement: { ...rec.settlement, ...patch } });
+    },
+    [commit],
+  );
+
   const verifyTrip = useCallback(async () => {
     const rec = recordRef.current;
     if (!rec || !fire("VERIFY")) return;
@@ -332,12 +435,13 @@ export function TripProvider({ children }: { children: ReactNode }) {
       tripId: rec.id,
       source: rec.source,
       scenario: rec.scenario,
+      mode: rec.mode,
       route: rec.routeId ? getRoute(rec.routeId) : null,
       samples: liveRef.current.samples,
       distanceKm: rec.distanceKm,
       durationSec: rec.durationSec,
-      vehicle: { category: rec.vehicle.category, fuel: rec.vehicle.fuel },
-      registration: registrationRef.current,
+      vehicle: rec.vehicle,
+      rideHail: rec.rideHail,
       knownFingerprints: historyRef.current.filter((h) => h.id !== rec.id).map((h) => ({ id: h.id, fingerprint: h.fingerprint })),
     };
     setVerify({ ...INITIAL_VERIFY, running: "3.1" });
@@ -366,34 +470,52 @@ export function TripProvider({ children }: { children: ReactNode }) {
     const trust = assignTrust(checks);
     setVerify((v) => ({ ...v, running: null, step: 5, trust }));
 
-    const ok = trust.assigned;
-    let emissions = null;
+    let ok = trust.assigned;
+    let carbon: CarbonResult | null = null;
     if (ok) {
-      const today = new Date(rec.endedAt).toDateString();
-      const tokensAlreadyToday = historyRef.current
-        .filter((h) => h.id !== rec.id && h.status === "VERIFIED" && new Date(h.endedAt).toDateString() === today)
-        .reduce((n, h) => n + (h.emissions?.tokens ?? 0), 0);
-      emissions = calculateEmissions({
-        distanceKm: rec.distanceKm,
-        category: rec.vehicle.category,
-        fuel: rec.vehicle.fuel,
-        model: rec.vehicle.model,
-        tier: trust.tier,
-        tokensAlreadyToday,
-        isDemo: trust.isDemo,
-      });
+      try {
+        carbon = calculateJourney({ mode: rec.mode, distanceKm: rec.distanceKm, vehicle: rec.vehicle?.spec, occupants: rec.rideHail?.occupants, at: rec.endedAt });
+      } catch (e) {
+        ok = false;
+        setNotice({ tone: "err", text: e instanceof JourneyInputError ? e.message : "The journey couldn't be calculated." });
+      }
     }
+
+    // DEMO or LIVE is decided once, here: real GPS + a real wallet on Portal V3 + a fully configured server = LIVE.
+    const w = walletRef.current;
+    const server = await loadStatus();
+    const liveMode = ok && rec.source === "gps" && server?.mode === "LIVE" && w.mode === "browser" && w.onExpectedChain && Boolean(w.address) && isContractAddress(CONTRACT.address) && Boolean(carbon?.reward.eligible);
+    const applicationMode: ApplicationMode = liveMode ? "LIVE" : "DEMO";
+
+    // What the contract's reward formula would mint, from the commuter's real streak (LIVE) or this tab's demo history.
+    let preview: Settlement["preview"];
+    if (ok && carbon?.reward.eligible && carbon.contract.mode !== null) {
+      let state = demoCommuterState(historyRef.current);
+      if (liveMode) {
+        try {
+          const c = await readCommuterOnChain(w.request, CONTRACT.address as `0x${string}`, w.address as `0x${string}`);
+          state = { streakDays: c.streakDays, lastTripTimestamp: c.lastTripTimestamp };
+        } catch {
+          /* fall back to the demo estimate; the preview is labelled as a preview */
+        }
+      }
+      const p = previewReward({ commuter: state, mode: carbon.contract.mode, co2AvoidedGrams: carbon.co2AvoidedGrams, nowSec: Math.floor(Date.now() / 1000) });
+      preview = { rewardMev: mevNumber(p.rewardWei), streakDays: p.streakDays, formula: p.formula };
+    }
+
+    const samples = liveRef.current.samples;
+    const routeDigest = keccak256(toHex(samples.map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join(";")));
     const final: TripRecord = {
       ...rec,
+      routeDigest,
       status: ok ? "VERIFIED" : "FAILED",
       verification: { checks, trust },
-      emissions,
+      carbon,
+      settlement: { ...NOT_STARTED, applicationMode, preview },
     };
-    recordRef.current = final;
-    setRecord(final);
     fire(ok ? "PASS" : "FAIL");
-    persist(final);
-  }, [fire, persist]);
+    commit(final);
+  }, [fire, commit]);
 
   const reset = useCallback(() => {
     runRef.current++;
@@ -409,27 +531,151 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   const clearHistory = useCallback(() => historyStore.set([]), []);
 
-  const previewLedger = useCallback(async () => {
+  /* ------------------------------ settlement ------------------------------ */
+  const claimDemo = useCallback(() => {
     const rec = recordRef.current;
-    if (!rec?.emissions || !rec.verification?.trust.assigned) return;
-    const vehicleId = rec.emissions.contractVehicleId;
-    let next: TripRecord;
-    if (vehicleId === null) {
-      next = {
-        ...rec,
-        ledger: {
-          phase: "not-submitted",
-          unavailableReason: "MissionEVRewards has no vehicle class for this vehicle, so no submitTrip call can be prepared.",
-        },
-      };
-    } else {
-      const preview = await buildLedgerPreview({ record: rec, samples: liveRef.current.samples, userAddress: rec.wallet.address, vehicleId });
-      next = { ...rec, ledger: { phase: "previewed", preview } };
+    if (!rec?.carbon?.reward.eligible || rec.settlement.phase !== "not-started") return;
+    patchSettlement({ applicationMode: "DEMO", phase: "demo-credited", demo: { creditedMev: rec.settlement.preview?.rewardMev ?? 0, at: Date.now() } });
+  }, [patchSettlement]);
+
+  const requestSignature = useCallback(async () => {
+    const rec = recordRef.current;
+    const w = walletRef.current;
+    if (!rec || rec.settlement.applicationMode !== "LIVE" || !rec.carbon?.reward.eligible) return;
+    const address = w.address;
+    if (w.mode !== "browser" || !address || !w.onExpectedChain || !isContractAddress(CONTRACT.address)) {
+      patchSettlement({ oracle: { status: "error", reason: `Connect your wallet on ${PORTAL_V3.name} first.` } });
+      return;
     }
-    recordRef.current = next;
-    setRecord(next);
-    persist(next);
-  }, [persist]);
+    const samples = liveRef.current.samples;
+    if (liveRef.current.tripId !== rec.id || samples.length < 2) {
+      patchSettlement({ oracle: { status: "unavailable", reason: "This trip's location samples are gone (the page was reloaded). Record a new trip to request a signature." } });
+      return;
+    }
+    patchSettlement({ phase: "not-started", oracle: { status: "requesting" }, tx: { status: "none" } });
+
+    // 1 — a free personal_sign proves the request comes from the holder of this address, for this trip only.
+    const message = oracleRequestMessage({ commuter: address, clientTripId: rec.id, contract: CONTRACT.address, chainId: PORTAL_V3.chainId, issuedAt: Date.now() });
+    let signature: string;
+    try {
+      signature = (await w.request("personal_sign", [toHex(message), address])) as string;
+    } catch (e) {
+      patchSettlement({ oracle: { status: "error", reason: rpcCode(e) === 4001 ? "You declined the signature request. Nothing was sent to the oracle." : "The wallet couldn't sign the request." } });
+      return;
+    }
+
+    // 2 — the oracle re-verifies the evidence, recalculates, and signs only what it derived.
+    const res = await postJson<{ status: string; reason?: string; signed?: SignedTrip }>("/api/oracle/sign-trip", {
+      commuter: address,
+      proof: { message, signature },
+      trip: {
+        clientTripId: rec.id,
+        mode: rec.mode,
+        source: rec.source,
+        startedAt: rec.startedAt,
+        endedAt: rec.endedAt,
+        distanceKm: rec.distanceKm,
+        durationSec: rec.durationSec,
+        samples: samples.map((p) => [Math.round(p.lat * 1e6) / 1e6, Math.round(p.lng * 1e6) / 1e6, p.t, Math.round(p.speedKmh * 10) / 10]),
+        vehicle: rec.vehicle,
+        rideHail: rec.rideHail,
+        occupants: rec.rideHail?.occupants ?? 1,
+      },
+    }).catch(() => null);
+
+    if (!res) return patchSettlement({ oracle: { status: "unavailable", reason: "The oracle couldn't be reached. Nothing was signed." } });
+    if (res.data.status === "signed" && res.data.signed) return patchSettlement({ phase: "signed", oracle: { status: "signed", signed: res.data.signed } });
+    const unavailable = res.data.status === "unavailable";
+    patchSettlement({ phase: unavailable ? "not-started" : "refused", oracle: { status: unavailable ? "unavailable" : "refused", reason: res.data.reason ?? "The oracle declined to sign this journey." } });
+  }, [patchSettlement]);
+
+  const submitOnChain = useCallback(async () => {
+    const rec = recordRef.current;
+    const w = walletRef.current;
+    const signed = rec?.settlement.oracle.signed;
+    if (!rec || !signed || rec.settlement.applicationMode !== "LIVE") return;
+    if (w.mode !== "browser" || !w.address || !w.onExpectedChain) {
+      return patchSettlement({ tx: { status: "error", error: `Connect your wallet on ${PORTAL_V3.name} first.` } });
+    }
+    if (w.address.toLowerCase() !== rec.wallet.address.toLowerCase()) {
+      return patchSettlement({ tx: { status: "error", error: "The connected wallet isn't the one this journey was signed for. The contract credits whoever sends the transaction, so switch back." } });
+    }
+    if (signed.deadline * 1000 < Date.now() + 5000) {
+      return patchSettlement({ phase: "not-started", oracle: { status: "error", reason: "The signature has expired. Request a fresh one." }, tx: { status: "none" } });
+    }
+    try {
+      // A signature is bound to the commuter's current nonce: if it moved, the signature can only revert.
+      const nonce = await readNonce(w.request, signed.contract as `0x${string}`, w.address as `0x${string}`);
+      if (nonce.toString() !== signed.nonce) {
+        return patchSettlement({ phase: "not-started", oracle: { status: "error", reason: "Your wallet's nonce moved since this was signed. Request a fresh signature." }, tx: { status: "none" } });
+      }
+    } catch {
+      /* the transaction itself will fail loudly if the chain is unreachable */
+    }
+
+    patchSettlement({ phase: "wallet-pending", tx: { status: "awaiting-wallet" } });
+    let hash: string;
+    try {
+      hash = await sendRecordCommute(w.request, { from: w.address, contract: signed.contract, signed });
+    } catch (e) {
+      return patchSettlement({ phase: "signed", tx: { status: rpcCode(e) === 4001 ? "rejected" : "error", error: rpcCode(e) === 4001 ? "You rejected the transaction in your wallet." : "The wallet couldn't send the transaction." } });
+    }
+    patchSettlement({ phase: "wallet-pending", tx: { status: "pending", hash } });
+    const receipt = await waitForReceipt(w.request, hash);
+    if (!receipt) return patchSettlement({ tx: { status: "pending", hash, error: "Still waiting for a receipt. Check the explorer, then reload this page." } });
+    if (receipt.status === "reverted") {
+      return patchSettlement({ phase: "failed", tx: { status: "reverted", hash, blockNumber: receipt.blockNumber, error: "The contract rejected the transaction (the signature may be stale, expired or the trip already recorded)." } });
+    }
+    // Exact amounts come from the receipt and the contract, never from the event's truncated pointsMinted.
+    const minted = mintedInReceipt(receipt, signed.contract, w.address);
+    const after = await readCommuterOnChain(w.request, signed.contract as `0x${string}`, w.address as `0x${string}`).catch(() => null);
+    patchSettlement({
+      phase: "confirmed",
+      tx: { status: "confirmed", hash, blockNumber: receipt.blockNumber },
+      onchain: after
+        ? { mintedWei: minted.toString(), balanceWei: after.balanceWei.toString(), streakDays: after.streakDays, carbonScore: after.carbonScore, totalAvoidedGrams: after.totalAvoidedGramsCO2, readAt: Date.now() }
+        : undefined,
+    });
+  }, [patchSettlement]);
+
+  /**
+   * DEMO or LIVE is first decided when a trip is verified, but a commuter may connect their wallet (or the server status may
+   * arrive) afterwards. Until a settlement step has actually started, re-evaluate it so connecting a wallet makes the finished
+   * trip recordable, and adopt that wallet as the commuter the oracle will sign for.
+   */
+  useEffect(() => {
+    const rec = record;
+    if (!rec || rec.status !== "VERIFIED" || !rec.carbon?.reward.eligible || rec.settlement.phase !== "not-started" || rec.settlement.oracle.status !== "not-requested") return;
+    let cancelled = false;
+    void (async () => {
+      const server = await loadStatus();
+      const liveNow = rec.source === "gps" && server?.mode === "LIVE" && wallet.mode === "browser" && wallet.onExpectedChain && Boolean(wallet.address) && isContractAddress(CONTRACT.address);
+      const wanted: ApplicationMode = liveNow ? "LIVE" : "DEMO";
+      if (cancelled || recordRef.current?.id !== rec.id) return;
+      const sameWallet = !liveNow || rec.wallet.address.toLowerCase() === wallet.address?.toLowerCase();
+      if (wanted === rec.settlement.applicationMode && sameWallet) return;
+      let preview = rec.settlement.preview;
+      if (liveNow && rec.carbon?.contract.mode != null) {
+        try {
+          const c = await readCommuterOnChain(wallet.request, CONTRACT.address as `0x${string}`, wallet.address as `0x${string}`);
+          const p = previewReward({ commuter: c, mode: rec.carbon.contract.mode, co2AvoidedGrams: rec.carbon.co2AvoidedGrams, nowSec: Math.floor(Date.now() / 1000) });
+          preview = { rewardMev: mevNumber(p.rewardWei), streakDays: p.streakDays, formula: p.formula };
+        } catch {
+          /* keep the earlier preview */
+        }
+      }
+      const latest = recordRef.current;
+      if (cancelled || !latest || latest.id !== rec.id || latest.settlement.phase !== "not-started") return;
+      commit({
+        ...latest,
+        wallet: liveNow ? { address: wallet.address as string, chainId: wallet.chainId, mode: "browser" } : latest.wallet,
+        settlement: { ...latest.settlement, applicationMode: wanted, preview },
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [record, wallet.mode, wallet.address, wallet.chainId, wallet.onExpectedChain, wallet.request, commit]);
 
   /* ------------------------------ engines ------------------------------ */
   // Simulation + active-time ticker.
@@ -449,7 +695,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
         const route = getRoute(s.routeId);
         const seed = seedFromId(l.tripId);
         const dtSim = (dt / 1000) * SIM_SCALE;
-        const speed = simSpeedKmh(reg.vehicle.category, seed, l.routeProgressKm, route.lengthKm);
+        const speed = simSpeedKmh(speedClassOf(s.mode, selectionRef.current.vehicle?.spec.body), seed, l.routeProgressKm, route.lengthKm);
         const progress = Math.min(route.lengthKm, l.routeProgressKm + (speed * dtSim) / 3600);
         const prev = l.samples[l.samples.length - 1];
         const sample = simSample({
@@ -544,6 +790,8 @@ export function TripProvider({ children }: { children: ReactNode }) {
       status,
       setup,
       setSetup,
+      setRide,
+      selection,
       route: getRoute(setup.routeId),
       gps,
       live,
@@ -560,9 +808,11 @@ export function TripProvider({ children }: { children: ReactNode }) {
       verifyTrip,
       reset,
       clearHistory,
-      previewLedger,
+      claimDemo,
+      requestSignature,
+      submitOnChain,
     }),
-    [status, setup, setSetup, gps, live, record, verify, notice, history, start, pause, resume, stop, verifyTrip, reset, clearHistory, previewLedger],
+    [status, setup, setSetup, setRide, selection, gps, live, record, verify, notice, history, start, pause, resume, stop, verifyTrip, reset, clearHistory, claimDemo, requestSignature, submitOnChain],
   );
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;

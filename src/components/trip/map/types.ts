@@ -10,4 +10,6 @@ export interface MapViewProps {
   position: LatLng | null;
   source: TripSource;
   recording: boolean;
+  /** Draw metro lines and stations (basemaps that can't simply ignore it). */
+  metro: boolean;
 }

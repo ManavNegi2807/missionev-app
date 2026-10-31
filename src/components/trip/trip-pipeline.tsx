@@ -16,10 +16,10 @@ export function TripPipeline() {
     isRegistered,
     ["COMPLETED", "VERIFYING", "VERIFIED", "FAILED"].includes(status),
     verified,
-    verified && Boolean(record?.emissions),
-    record?.ledger.phase === "confirmed",
+    verified && Boolean(record?.carbon),
+    record?.settlement.phase === "confirmed" || record?.settlement.phase === "demo-credited",
   ];
-  const previewed = record?.ledger.phase === "previewed";
+  const previewed = record?.settlement.phase === "demo-credited";
   const firstOpen = done.findIndex((d) => !d);
 
   const states: StageState[] = STAGES.map((_, i) => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { mevNumber } from "@/lib/contract/client";
 import { Trash2 } from "lucide-react";
 import { Badge, Button, Panel, PanelHeader } from "@/components/ui/primitives";
 import { formatDuration } from "@/lib/format";
@@ -37,14 +38,15 @@ export function TripHistory() {
                 {t.distanceKm.toFixed(2)} km <span className="block text-[11px] text-muted">{formatDuration(t.durationSec)}</span>
               </p>
               <p className="font-mono text-xs">
-                {t.emissions ? `${t.emissions.estimatedG.toFixed(1)} g` : "—"}
-                <span className="block text-[11px] text-muted">{t.emissions ? `${t.emissions.tokens} $MEV` : "no reward"}</span>
+                {t.carbon ? `${t.carbon.actual.grams.toFixed(1)} g` : "—"}
+                <span className="block text-[11px] text-muted">{t.carbon?.reward.eligible ? `${(t.settlement.onchain ? mevNumber(t.settlement.onchain.mintedWei) : (t.settlement.demo?.creditedMev ?? t.settlement.preview?.rewardMev ?? 0)).toFixed(2)} $MEV${t.settlement.phase === "confirmed" ? "" : " (preview)"}` : "no reward"}</span>
               </p>
               <p className="text-right font-mono text-xs sm:text-left">{t.verification?.trust.assigned ? `Trust 4.0 · ${t.verification.trust.tier}` : "Not verified"}</p>
               <div className="col-span-2 flex flex-wrap gap-1.5 sm:col-span-1 sm:justify-end">
                 <Badge tone={t.status === "VERIFIED" ? "ok" : "err"}>{t.status}</Badge>
                 {t.isSimulated && <Badge tone="warn">Demo</Badge>}
-                {t.ledger.phase === "previewed" && <Badge tone="neutral">Preview</Badge>}
+                {t.settlement.phase === "demo-credited" && <Badge tone="warn">Demo credit</Badge>}
+                {t.settlement.phase === "confirmed" && <Badge tone="ok">On-chain</Badge>}
               </div>
             </li>
           ))}

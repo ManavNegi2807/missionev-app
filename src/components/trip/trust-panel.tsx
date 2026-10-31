@@ -3,7 +3,7 @@
 import { Info, Loader2, ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { Alert, Badge, Panel } from "@/components/ui/primitives";
 import { cn, formatClock } from "@/lib/format";
-import { EMISSION_CONFIG } from "@/lib/trip/emissions";
+import { TRUST_PERCENT } from "@/lib/trip/verification";
 import type { ContractTier } from "@/lib/trip/types";
 import { useTrip } from "@/providers/trip-provider";
 
@@ -77,7 +77,7 @@ export function TrustPanel() {
         </div>
 
         <div>
-          <p className="section-label mb-2">Contract trust tier (MissionEVRewards · reward multiplier)</p>
+          <p className="section-label mb-2">Evidence tier (off-chain · does not scale the reward)</p>
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {TIERS.map((t) => {
               const on = trust ? trust.tier === t : false;
@@ -91,13 +91,13 @@ export function TrustPanel() {
                   aria-current={on ? "true" : undefined}
                 >
                   {t.toUpperCase()}
-                  <span className="block text-[11px]">{EMISSION_CONFIG.trustPercent[t]}%</span>
+                  <span className="block text-[11px]">{TRUST_PERCENT[t]}% evidence</span>
                 </li>
               );
             })}
           </ul>
           <p className="mt-2 text-xs text-muted">
-            Gold: all checks incl. partner proof · Silver: no partner ride-log · Rejected: any critical failure (from the project’s decision table).
+            Gold: all checks incl. partner proof · Silver: no partner ride-log · Rejected: any critical failure. Tiers describe how much evidence backs a trip; they do not scale the on-chain reward, which the contract fixes.
           </p>
         </div>
       </div>

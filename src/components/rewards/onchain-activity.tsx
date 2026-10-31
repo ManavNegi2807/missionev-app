@@ -4,7 +4,7 @@ import { Check, Circle, ExternalLink, Minus } from "lucide-react";
 import { Badge, Panel, PanelHeader } from "@/components/ui/primitives";
 import { PORTAL_V3 } from "@/lib/chain";
 import { cn, formatNumber, shortAddress } from "@/lib/format";
-import { CONTRACT } from "@/lib/trip/ledger";
+import { CONTRACT } from "@/lib/contract/config";
 import { useOnboarding } from "@/providers/onboarding-provider";
 import { useRewards } from "@/providers/rewards-provider";
 
@@ -72,15 +72,15 @@ export function OnchainActivity() {
             {onchain?.eventsError ? (
               <p className="rounded-lg border border-line p-3 text-sm text-muted">Event history unavailable from this RPC: {onchain.eventsError}</p>
             ) : chainEvents.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-line-strong p-4 text-sm text-muted">{refreshing ? "Reading events…" : "No reward or redemption events found for this wallet yet."}</p>
+              <p className="rounded-lg border border-dashed border-line-strong p-4 text-sm text-muted">{refreshing ? "Reading events…" : "No $MEV events found for this wallet yet."}</p>
             ) : (
               <ul className="divide-y divide-line rounded-xl border border-line">
                 {chainEvents.map((e) => (
                   <li key={e.id} data-chain-event={e.kind} className="space-y-1.5 px-4 py-3">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <p className="text-sm font-medium text-fg">{e.kind === "reward" ? "Reward event (TripRecorded)" : `Redeemed · ${e.rewardId}`}</p>
-                      <p className={cn("font-mono text-sm", e.kind === "reward" ? "text-lime" : "text-cyan")}>
-                        {e.kind === "reward" ? "+" : "−"}
+                      <p className="text-sm font-medium text-fg">{e.kind === "reward" ? "Commute recorded (minted)" : e.kind === "transfer-out" ? "Transferred out" : "Transferred in"}</p>
+                      <p className={cn("font-mono text-sm", e.kind === "transfer-out" ? "text-cyan" : "text-lime")}>
+                        {e.kind === "transfer-out" ? "−" : "+"}
                         {formatNumber(e.amount)} $MEV
                       </p>
                     </div>

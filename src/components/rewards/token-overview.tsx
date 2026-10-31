@@ -23,7 +23,7 @@ function Mini({ label, value, unit, sub }: { label: string; value: string; unit?
 }
 
 export function TokenOverview() {
-  const { summary: s, onchainActive, grantDemo, refreshOnchain, refreshing, gasWei, checks, chainError } = useRewards();
+  const { summary: s, onchainActive, onchain, grantDemo, refreshOnchain, refreshing, gasWei, checks, chainError } = useRewards();
   const wallet = useWallet();
 
   const gasReason = wallet.isDemo
@@ -67,7 +67,7 @@ export function TokenOverview() {
             <div>
               <p className="section-label">Available</p>
               <p className="mt-1 font-mono text-5xl leading-none font-semibold text-lime sm:text-6xl" data-testid="balance">
-                <AnimatedNumber value={s.balance} decimals={0} />
+                <AnimatedNumber value={s.balance} decimals={2} />
                 <span className="ml-2 text-lg font-normal text-muted">$MEV</span>
               </p>
             </div>
@@ -91,8 +91,8 @@ export function TokenOverview() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Mini label="Total earned" value={formatNumber(s.earned)} unit="$MEV" sub={onchainActive ? "sum of TripRecorded events" : "demo credits"} />
-            <Mini label="Total redeemed" value={formatNumber(s.redeemed)} unit="$MEV" sub={onchainActive ? "sum of Redeemed events" : "simulated"} />
+            <Mini label="Total earned" value={formatNumber(s.earned)} unit="$MEV" sub={onchainActive ? "sum of mint Transfer events" : "demo credits"} />
+            <Mini label="Total redeemed" value={formatNumber(s.redeemed)} unit="$MEV" sub="simulated · no on-chain redeem" />
             <Mini label="Pending" value={formatNumber(s.pending)} unit="$MEV" sub="verified, not recorded yet" />
             <Mini
               label="Latest reward event"
@@ -102,9 +102,25 @@ export function TokenOverview() {
             />
           </div>
 
+          {onchainActive && onchain?.commuter && (
+            <dl className="grid grid-cols-3 gap-3 rounded-xl border border-line bg-bg-2/50 p-3.5" aria-label="Contract commuter profile">
+              {[
+                ["Streak", `${onchain.commuter.streakDays} day${onchain.commuter.streakDays === 1 ? "" : "s"}`],
+                ["Carbon score", `${onchain.commuter.carbonScore} / 1000`],
+                ["Trips recorded", String(onchain.commuter.totalTripsLogged)],
+              ].map(([k, v]) => (
+                <div key={k} className="min-w-0">
+                  <dt className="section-label">{k}</dt>
+                  <dd className="mt-1 font-mono text-sm text-fg">{v}</dd>
+                </div>
+              ))}
+              <p className="col-span-3 text-xs text-muted">Read from <span className="font-mono">getCommuter</span>. The streak multiplier and score are the contract&apos;s own; MEV is a prototype reward token, not a certified carbon credit.</p>
+            </dl>
+          )}
+
           {!onchainActive && (
             <p className="text-xs leading-relaxed text-muted">
-              Demo balance = tokens from trips whose on-chain record you previewed on Screen 02, plus any demo top-ups, minus simulated redemptions. Nothing here is minted or held by a wallet.
+              Demo balance = tokens from trips you credited in the demo on Screen 02, plus any demo top-ups, minus simulated redemptions. Nothing here is minted or held by a wallet.
               {chainError && <span className="mt-1 block text-err">Contract read failed: {chainError}</span>}
             </p>
           )}

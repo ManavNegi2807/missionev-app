@@ -1,32 +1,42 @@
 import { fnv1a } from "@/lib/format";
-import type { RegistrationRecord } from "@/providers/onboarding-provider";
-import type { VehicleCategory } from "@/lib/vehicle";
+import { validateConsumption, validateMileage } from "@/lib/carbon/efficiency";
 import { haversineKm, projectOnPolyline, type LatLng } from "./geo";
 import type { DemoRoute } from "./demo-routes";
-import type { CheckItem, CheckResult, CheckStatus, ContractTier, GpsSample, Scenario, TripSource, TrustResult } from "./types";
-import { EMISSION_CONFIG } from "./emissions";
+import { speedClassOf, TRAVEL_LABEL, type SpeedClass } from "./travel";
+import type { CheckItem, CheckResult, CheckStatus, ContractTier, GpsSample, RideHailInfo, Scenario, TravelMode, TripSource, TripVehicle, TrustResult } from "./types";
 
+/**
+ * Trip verification. These are pure functions of the trip evidence, so the browser runs them for instant feedback and
+ * the oracle route runs the same code again on the evidence it receives: the server never trusts a client's verdict.
+ */
 export interface VerifyContext {
   tripId: string;
   source: TripSource;
   scenario: Scenario;
+  mode: TravelMode;
   route: DemoRoute | null;
   samples: GpsSample[];
   distanceKm: number;
   durationSec: number;
-  vehicle: { category: VehicleCategory; fuel: string };
-  registration: RegistrationRecord | null;
+  /** The vehicle used on this trip; null for metro, bus and walking. */
+  vehicle: TripVehicle | null;
+  rideHail: RideHailInfo | null;
   /** Fingerprints of earlier trips in this session (replay detection). */
   knownFingerprints: Array<{ id: string; fingerprint: string }>;
 }
 
-const SPEED_LIMIT: Record<VehicleCategory, number> = {
-  "Two-wheeler": 110,
-  "Electric two-wheeler": 100,
-  "Four-wheeler": 140,
-  "Electric car": 140,
-  Commercial: 100,
-};
+const SPEED_LIMIT: Record<SpeedClass, number> = { car: 140, two_wheeler: 110, metro: 90, ebus: 60, active: 25 };
+
+/** Walking is slower than the 3 km/h floor the vehicle rules use. */
+const MIN_AVG_KMH: Partial<Record<SpeedClass, number>> = { active: 2 };
+/** Underground metro sections lose GPS for minutes, so the sample-gap rule is looser for it. */
+const MAX_GAP_SEC: Partial<Record<SpeedClass, number>> = { metro: 300 };
+
+/** How much evidence backs a tier. Informational: it does not scale the on-chain reward, which the contract fixes. */
+export const TRUST_PERCENT: Record<ContractTier, number> = { Rejected: 0, Bronze: 40, Silver: 75, Gold: 100 };
+
+/** Receipt distance and GPS distance must agree this closely for a ride-hail journey to be signed. */
+export const RIDE_DISTANCE_TOLERANCE = 0.15;
 
 const stamp = (status: CheckStatus, items: CheckItem[]): CheckStatus => (items.some((i) => i.ok === false) ? "fail" : status);
 
@@ -36,57 +46,90 @@ export function fingerprintOf(samples: GpsSample[]): string {
   return fnv1a(acc).toString(16).padStart(8, "0");
 }
 
-/* ---------------- 3.1 Vehicle / RC (Vahan registry — DEMO adapter) ---------------- */
+const PRIVATE_FUELS: Partial<Record<TravelMode, string[]>> = {
+  private_ev_car: ["electric"],
+  private_ev_2w: ["electric"],
+  private_petrol_car: ["petrol"],
+  private_diesel_car: ["diesel"],
+  private_ice_2w: ["petrol", "diesel", "cng"],
+};
+
+/* ---------------- 3.1 Journey vehicle / ride receipt (self-declared — no registry is contacted) ---------------- */
 export function checkVehicle(ctx: VerifyContext): CheckResult {
-  const reg = ctx.registration;
-  const items: CheckItem[] = [
-    {
-      label: "Vehicle registration exists",
-      ok: Boolean(reg),
-      detail: reg ? `Found in DEMO REGISTRY · ${reg.vehicle.maskedReg}` : "No registration on file — complete Screen 01.",
-    },
-    {
-      label: "Registered vehicle type checked",
-      ok: reg ? reg.vehicle.category === ctx.vehicle.category : false,
-      detail: reg ? `Registry: ${reg.vehicle.category} · trip: ${ctx.vehicle.category}` : "—",
-    },
-    {
-      label: "Fuel type checked",
-      ok: reg ? reg.vehicle.fuel === ctx.vehicle.fuel : false,
-      detail: reg ? `Registry: ${reg.vehicle.fuel} · trip: ${ctx.vehicle.fuel}` : "—",
-    },
-    { label: "RC status", ok: reg ? reg.vehicle.rcStatus === "ACTIVE" : false, detail: reg ? `${reg.vehicle.rcStatus} (demo)` : "—" },
-  ];
-  const status = stamp("demo", items);
+  if (ctx.mode === "metro" || ctx.mode === "ebus" || ctx.mode === "active") {
+    return {
+      id: "3.1",
+      status: "na",
+      isDemo: false,
+      summary: `Not applicable: this trip was made by ${TRAVEL_LABEL[ctx.mode].toLowerCase()}, so no vehicle is involved.`,
+      items: [{ label: "Vehicle", ok: null, detail: "Not needed for this travel mode" }],
+      technical: { reason: "no vehicle", mode: ctx.mode },
+      at: null,
+    };
+  }
+
+  const v = ctx.vehicle;
+  const spec = v?.spec;
+  const efficiencyError = spec
+    ? spec.powertrain === "electric"
+      ? validateConsumption(spec.body, spec.consumptionKWhPerKm ?? 0)
+      : validateMileage(spec.body, spec.powertrain, spec.mileageKmPerUnit ?? 0)
+    : "No vehicle.";
+  const items: CheckItem[] = [];
+
+  if (ctx.mode === "ride_hail") {
+    const r = ctx.rideHail;
+    const receiptKm = r?.receipt.distanceKm ?? null;
+    const diff = receiptKm && ctx.distanceKm > 0 ? Math.abs(receiptKm - ctx.distanceKm) / ctx.distanceKm : null;
+    items.push(
+      { label: "Ride receipt provided", ok: Boolean(r), detail: r ? `${r.provider} · ${r.receipt.source === "ocr-reviewed" ? "read by OCR, reviewed by you" : "entered by you"}` : "Add the receipt or its details." },
+      { label: "Vehicle and fuel confirmed by you", ok: Boolean(r?.receipt.confirmedByUser && v), detail: v ? `${v.label} · ${v.spec.powertrain}` : "Confirm the vehicle that carried you." },
+      {
+        label: `Receipt distance vs captured distance (±${RIDE_DISTANCE_TOLERANCE * 100}%)`,
+        ok: diff === null ? false : diff <= RIDE_DISTANCE_TOLERANCE,
+        detail: receiptKm ? `${receiptKm.toFixed(1)} km on receipt · ${ctx.distanceKm.toFixed(2)} km captured · Δ ${((diff ?? 0) * 100).toFixed(1)}%` : "The receipt distance is missing.",
+      },
+      { label: "Efficiency figure plausible", ok: !efficiencyError, detail: efficiencyError ?? "Within the expected range" },
+    );
+  } else {
+    const allowed = PRIVATE_FUELS[ctx.mode] ?? [];
+    items.push(
+      { label: "Vehicle chosen for this journey", ok: Boolean(v), detail: v ? v.label : "Pick a vehicle from your profile on Screen 01." },
+      { label: "Vehicle matches the journey mode", ok: spec ? allowed.includes(spec.powertrain) : false, detail: spec ? `${TRAVEL_LABEL[ctx.mode]} · ${spec.powertrain}` : "—" },
+      { label: "Efficiency figure plausible", ok: !efficiencyError, detail: efficiencyError ?? `${spec?.efficiencySource === "category-default" ? "Category default" : "Self-declared"} · within the expected range` },
+    );
+  }
+
+  const status = stamp("pass", items);
   return {
     id: "3.1",
     status,
-    isDemo: true,
+    isDemo: false,
     summary:
       status === "fail"
-        ? "The registry record doesn't match this trip's vehicle."
-        : "Registration, vehicle type and fuel match the DEMO REGISTRY record. Vahan itself was not contacted.",
+        ? ctx.mode === "ride_hail"
+          ? "The ride details don't support a calculation yet."
+          : "The vehicle for this journey isn't usable."
+        : ctx.mode === "ride_hail"
+          ? "The receipt details are consistent. OCR and your confirmation are not proof of the vehicle's fuel; no ride-hail company was contacted."
+          : "The journey's vehicle is consistent. The profile is self-declared; no vehicle registry was checked.",
     items,
-    technical: {
-      adapter: "mock-vahan (local)",
-      registryRef: reg?.vehicle.registryRef ?? "—",
-      lookupGeneratedAt: reg ? new Date(reg.vehicle.verifiedAt).toISOString() : "—",
-    },
+    technical: { source: ctx.mode === "ride_hail" ? "ride receipt" : "self-declared profile", vehicle: v?.label ?? "—", efficiencySource: spec?.efficiencySource ?? "—" },
     at: null,
   };
 }
 
 /* ---------------- 3.2 EV-maker ride log (mock) ---------------- */
 export function checkRideLog(ctx: VerifyContext): CheckResult {
-  const isEv = ctx.vehicle.fuel === "Electric";
+  const isEv = (ctx.mode === "private_ev_car" || ctx.mode === "private_ev_2w") && ctx.vehicle?.spec.powertrain === "electric";
   if (!isEv) {
     return {
       id: "3.2",
       status: "na",
       isDemo: false,
-      summary: "Not applicable: this vehicle isn't electric, so there is no EV-maker ride log to compare.",
-      items: [{ label: "EV ride-log availability", ok: null, detail: `${ctx.vehicle.fuel} vehicle` }],
-      technical: { reason: "non-electric vehicle" },
+      summary: ctx.mode === "ride_hail" ? "Not applicable: a ride-hail journey is checked against its receipt instead." : "Not applicable: only a private EV has an EV-maker ride log to compare.",
+      items: [{ label: "EV ride-log availability", ok: null, detail: `${TRAVEL_LABEL[ctx.mode]} trip` }],
+      technical: { reason: "no private EV" },
       at: null,
     };
   }
@@ -96,7 +139,7 @@ export function checkRideLog(ctx: VerifyContext): CheckResult {
   const diffPct = ctx.distanceKm > 0 ? (Math.abs(reported - ctx.distanceKm) / ctx.distanceKm) * 100 : 100;
   const items: CheckItem[] = [
     { label: "EV ride-log available", ok: true, detail: "Mock log generated locally" },
-    { label: "Vehicle identity consistent", ok: true, detail: ctx.registration?.vehicle.maskedReg ?? "—" },
+    { label: "Vehicle identity consistent", ok: true, detail: ctx.vehicle?.label ?? "—" },
     {
       label: "Reported distance vs trip distance (±5%)",
       ok: diffPct <= 5,
@@ -121,7 +164,10 @@ export function checkRideLog(ctx: VerifyContext): CheckResult {
 /* ---------------- 3.3 Motion & GPS (D2 Trips & Telemetry) ---------------- */
 export function checkMotion(ctx: VerifyContext): CheckResult {
   const s = ctx.samples;
-  const limit = SPEED_LIMIT[ctx.vehicle.category];
+  const speedClass = speedClassOf(ctx.mode, ctx.vehicle?.spec.body);
+  const limit = SPEED_LIMIT[speedClass];
+  const minAvg = MIN_AVG_KMH[speedClass] ?? 3;
+  const gapLimit = MAX_GAP_SEC[speedClass] ?? 120;
   let maxGapSec = 0;
   let dupTs = 0;
   let teleports = 0;
@@ -148,8 +194,8 @@ export function checkMotion(ctx: VerifyContext): CheckResult {
   const items: CheckItem[] = [
     {
       label: "Location sample completeness",
-      ok: s.length >= 5 && maxGapSec <= 120,
-      detail: `${s.length} samples · largest gap ${Math.round(maxGapSec)} s (need ≥ 5 samples, gaps ≤ 120 s)`,
+      ok: s.length >= 5 && maxGapSec <= gapLimit,
+      detail: `${s.length} samples · largest gap ${Math.round(maxGapSec)} s (need ≥ 5 samples, gaps ≤ ${gapLimit} s)`,
     },
     {
       label: "Movement consistency",
@@ -158,7 +204,7 @@ export function checkMotion(ctx: VerifyContext): CheckResult {
     },
     {
       label: "Distance plausibility",
-      ok: ctx.distanceKm >= 0.2 && avg >= 3 && avg <= limit,
+      ok: ctx.distanceKm >= 0.2 && avg >= minAvg && avg <= limit,
       detail: `${ctx.distanceKm.toFixed(2)} km at ${avg.toFixed(1)} km/h average (class limit ${limit} km/h)`,
     },
     {
@@ -281,7 +327,7 @@ export function checkRoute(ctx: VerifyContext): CheckResult {
 /* ---------------- 3.5 Assign trust level ---------------- */
 export function assignTrust(results: Record<"3.1" | "3.2" | "3.3" | "3.4", CheckResult>): TrustResult {
   const titles: Record<string, string> = {
-    "3.1": "Vehicle / RC validation",
+    "3.1": "Journey vehicle / receipt check",
     "3.2": "EV maker ride-log check",
     "3.3": "Motion & GPS validation",
     "3.4": "Route validation",
@@ -297,7 +343,7 @@ export function assignTrust(results: Record<"3.1" | "3.2" | "3.3" | "3.4", Check
     assigned,
     level: assigned ? 4.0 : null,
     tier,
-    tierPercent: EMISSION_CONFIG.trustPercent[tier],
+    tierPercent: TRUST_PERCENT[tier],
     isDemo,
     failedConditions: failed,
     at: Date.now(),

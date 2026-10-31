@@ -4,10 +4,10 @@ import { usePathname } from "next/navigation";
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Badge } from "@/components/ui/primitives";
 import { navForPath } from "@/lib/nav";
-import { useWallet } from "@/providers/wallet-provider";
+import { useOnboarding } from "@/providers/onboarding-provider";
+import { AccountButton } from "./account-button";
 import { NetworkIndicator } from "./network-indicator";
 import { ThemeToggle } from "./theme-toggle";
-import { WalletButton } from "./wallet-button";
 
 export function Topbar({
   collapsed,
@@ -22,7 +22,8 @@ export function Topbar({
 }) {
   const pathname = usePathname();
   const current = navForPath(pathname);
-  const { isDemo } = useWallet();
+  const { registration } = useOnboarding();
+  const isDemo = Boolean(registration?.isDemoData);
 
   const iconBtn =
     "grid size-9 shrink-0 place-items-center rounded-lg border border-line text-muted transition hover:border-line-strong hover:text-fg";
@@ -61,13 +62,13 @@ export function Topbar({
       </nav>
 
       {isDemo && (
-        <Badge tone="warn" className="hidden lg:inline-flex">
+        <Badge tone="warn" className="max-lg:hidden">
           Demo mode
         </Badge>
       )}
       <NetworkIndicator />
       <ThemeToggle />
-      <WalletButton />
+      <AccountButton />
     </header>
   );
 }

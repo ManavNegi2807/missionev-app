@@ -3,7 +3,7 @@
 import { ArrowRight, Database, Map, Server, UserRound } from "lucide-react";
 import { Badge, Panel, PanelHeader } from "@/components/ui/primitives";
 import { cn } from "@/lib/format";
-import { azureConfigured } from "@/lib/maps/azure";
+import { CONFIGURED_BASEMAP } from "@/lib/maps/provider";
 import { useTrip } from "@/providers/trip-provider";
 
 /** Level 1 / Level 2 flow for processes 2.0 → 5.0, with the services that feed each verification check. */
@@ -16,7 +16,7 @@ export function TripDataFlow() {
       : status === "COMPLETED"
         ? 2
         : status === "VERIFIED"
-          ? record?.ledger.phase === "previewed"
+          ? record?.settlement.phase === "demo-credited" || record?.settlement.phase === "confirmed"
             ? 5
             : 4
           : status === "RECORDING" || status === "PAUSED"
@@ -30,16 +30,16 @@ export function TripDataFlow() {
     { n: "2.0 Capture Trip", sub: "GPS / simulated", icon: <Server className="size-4" />, kind: "process" },
     { n: "D2 Trips & Telemetry", sub: "frontend state (session)", icon: <Database className="size-4" />, kind: "store" },
     { n: "3.0 Verify Trip", sub: "checks 3.1–3.4 → 3.5", icon: <Server className="size-4" />, kind: "process" },
-    { n: "4.0 Calculate CO₂ & Tokens", sub: "contract maths", icon: <Server className="size-4" />, kind: "process" },
-    { n: "5.0 Record On-chain", sub: "preview only", icon: <Server className="size-4" />, kind: "process" },
-    { n: "D3 Smart-contract Ledger", sub: "not connected", icon: <Database className="size-4" />, kind: "store" },
+    { n: "4.0 Calculate CO₂ & Tokens", sub: "shared carbon engine", icon: <Server className="size-4" />, kind: "process" },
+    { n: "5.0 Record On-chain", sub: "oracle sig → your wallet", icon: <Server className="size-4" />, kind: "process" },
+    { n: "D3 Smart-contract Ledger", sub: "DEMO unless configured", icon: <Database className="size-4" />, kind: "store" },
   ];
 
   const feeders = [
-    { from: "Vahan registry", to: "3.1", status: "Demo registry", tone: "warn" as const },
+    { from: "Vehicle profile / ride receipt", to: "3.1", status: "Self-declared", tone: "neutral" as const },
     { from: "EV maker API", to: "3.2", status: "Not connected", tone: "neutral" as const },
     { from: "D2 Trips & Telemetry", to: "3.3", status: "Local rules", tone: "cyan" as const },
-    { from: "Azure Maps", to: "3.4 / map", status: azureConfigured ? "Basemap key set" : "Not configured", tone: azureConfigured ? ("cyan" as const) : ("neutral" as const) },
+    { from: CONFIGURED_BASEMAP, to: "3.4 / map", status: "Basemap only", tone: "cyan" as const },
   ];
 
   return (

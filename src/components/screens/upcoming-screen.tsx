@@ -25,7 +25,7 @@ export function UpcomingScreen({ step, title, blurb }: { step: string; title: st
         <Alert
           tone="warn"
           icon={<Lock aria-hidden className="size-4" />}
-          title="Registration required"
+          title="Sign-in required"
           actions={
             <Link
               href="/register"
@@ -35,30 +35,28 @@ export function UpcomingScreen({ step, title, blurb }: { step: string; title: st
             </Link>
           }
         >
-          Connect a wallet and verify a vehicle on Screen 01 before using this section.
+          Sign in with your mobile number on Screen 01 before using this section.
         </Alert>
       ) : registration ? (
         <Panel>
           <PanelHeader
             eyebrow="D1 — Users & Vehicles"
-            title="Registration state from Screen 01"
+            title="Account state from Screen 01"
             action={registration.isDemoData ? <Badge tone="warn">Demo data</Badge> : undefined}
           />
           <dl className="grid grid-cols-2 gap-4 p-4 sm:p-6 lg:grid-cols-4">
             <KV label="User" mono>
               {registration.userId}
             </KV>
-            <KV label="Wallet" mono>
+            <KV label="Mobile (masked)" mono>
+              {registration.phone.masked}
+            </KV>
+            <KV label="Reward account" mono>
               {shortAddress(registration.wallet.address)}
             </KV>
-            <KV label="Vehicle (masked)" mono>
-              {registration.vehicle.maskedReg}
-            </KV>
-            <KV label="Model">
-              {registration.vehicle.manufacturer} {registration.vehicle.model}
-            </KV>
-            <KV label="Category">{registration.vehicle.category}</KV>
-            <KV label="Power">{registration.vehicle.fuel}</KV>
+            <KV label="Saved vehicles">{registration.transport ? (registration.transport.registeredVehicles.length ? `${registration.transport.registeredVehicles.length}` : "None (metro / bus / walking)") : "Not set"}</KV>
+            <KV label="Modes you use">{registration.transport ? `${registration.transport.preferredModes.length}` : "Not set"}</KV>
+            <KV label="Ride-hail">{registration.transport?.preferredModes.includes("ride_hail") ? "Yes" : "—"}</KV>
             <KV label="Registered">{formatTimestamp(registration.registeredAt)}</KV>
             <KV label="Chain ID" mono>
               {registration.wallet.chainId}

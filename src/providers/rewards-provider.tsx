@@ -2,17 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { fnv1a } from "@/lib/format";
-import { CONTRACT } from "@/lib/trip/ledger";
+import { CONTRACT, isContractAddress } from "@/lib/contract/config";
 import { createSessionStore } from "@/lib/session-store";
 import { CATALOG, type CatalogItem } from "@/lib/rewards/catalog";
-import { getReceipt, readGas, readOnchain, sendRedeem, waitForReceipt } from "@/lib/rewards/chain";
+import { readGas, readOnchain } from "@/lib/rewards/chain";
 import { summarize, type DemoGrant, type RewardSummary } from "@/lib/rewards/summary";
 import type { ChainEvent, OnchainSnapshot, RedemptionRecord } from "@/lib/rewards/types";
 import { useOnboarding } from "./onboarding-provider";
 import { useTrip } from "./trip-provider";
 import { useWallet } from "./wallet-provider";
 
-/* D4 — Redemptions, and the demo top-up ledger. Both live in this tab's session storage. */
+/* D4 — Redemptions (always simulated: the contract has no redeem), and the demo top-up ledger. Both live in this tab's session storage. */
 const redemptionStore = createSessionStore<RedemptionRecord[]>("missionev:d4:redemptions", []);
 const grantStore = createSessionStore<DemoGrant[]>("missionev:d3demo:grants", []);
 
@@ -27,7 +27,7 @@ export interface OnchainChecks {
 
 interface RewardsContextValue {
   summary: RewardSummary;
-  /** True only when a deployed contract was found and balanceOf was read through a real wallet. */
+  /** True only when a deployed MissionEV contract was found and its state was read through a real wallet. */
   onchainActive: boolean;
   checks: OnchainChecks;
   onchain: OnchainSnapshot | null;
@@ -42,7 +42,6 @@ interface RewardsContextValue {
   clearSimulated(): void;
   refreshOnchain(): Promise<void>;
   redeem(item: CatalogItem): Promise<RedemptionRecord>;
-  recheckRecord(id: string): Promise<void>;
 }
 
 const Ctx = createContext<RewardsContextValue | null>(null);
@@ -58,7 +57,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
   const contract = CONTRACT.address;
   const realWallet = wallet.mode === "browser" && !!wallet.address;
-  const eligible = Boolean(contract) && realWallet && wallet.onExpectedChain;
+  const eligible = isContractAddress(contract) && realWallet && wallet.onExpectedChain;
   const key = eligible ? `${contract}:${wallet.address}:${wallet.chainId}` : null;
 
   const [data, setData] = useState<{ key: string; snap: OnchainSnapshot } | null>(null);
@@ -96,11 +95,6 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       const snap = await readOnchain(w.request, contract, w.address);
       setData({ key: k, snap });
       setFailed(null);
-      // Settle any pending real redemptions whose receipt we may have missed (e.g. after a reload).
-      for (const r of redemptionStore.getSnapshot().filter((x) => x.mode === "onchain" && x.status === "pending" && x.txHash)) {
-        const rc = await getReceipt(w.request, r.txHash!).catch(() => null);
-        if (rc) patch(r.id, { status: rc.status === "success" ? "completed" : "failed", blockNumber: rc.blockNumber, updatedAt: Date.now(), error: rc.status === "reverted" ? "Transaction reverted on-chain." : undefined });
-      }
     } catch (e) {
       setFailed({ key: k, message: e instanceof Error ? e.message : "Could not read the contract." });
     } finally {
@@ -111,6 +105,14 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (key) void refreshOnchain();
   }, [key, refreshOnchain]);
+
+  // A commute confirmed in the Capture Trip screen changes the contract's state: re-read it rather than guessing.
+  const confirmed = history.filter((t) => t.settlement.phase === "confirmed").length;
+  const seenConfirmed = useRef(confirmed);
+  useEffect(() => {
+    if (confirmed > seenConfirmed.current && key) void refreshOnchain();
+    seenConfirmed.current = confirmed;
+  }, [confirmed, key, refreshOnchain]);
 
   const snap = key && data?.key === key ? data.snap : null;
   const active = Boolean(snap && snap.hasCode && snap.balance !== null);
@@ -143,10 +145,6 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     grantStore.set([]);
   }, []);
 
-  function patch(id: string, p: Partial<RedemptionRecord>) {
-    redemptionStore.set(redemptionStore.getSnapshot().map((r) => (r.id === id ? { ...r, ...p } : r)));
-  }
-
   const latest = useRef({ summary, active, stockLeft, registration });
   useEffect(() => {
     latest.current = { summary, active, stockLeft, registration };
@@ -154,7 +152,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
   const redeem = useCallback(
     async (item: CatalogItem): Promise<RedemptionRecord> => {
-      const { summary: s, active: isOnchain, stockLeft: left } = latest.current;
+      const { summary: s, stockLeft: left } = latest.current;
       const w = walletRef.current;
       if (left(item) <= 0) throw new Error("This reward is unavailable.");
       if (item.cost > s.balance) throw new Error(`Insufficient $MEV balance: ${item.cost} needed, ${s.balance} available.`);
@@ -173,46 +171,20 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
         balanceAfter: s.balance - item.cost,
       };
 
-      if (!isOnchain) {
-        // Clearly-labelled simulation: no tokens move and no transaction exists.
-        await new Promise((r) => setTimeout(r, 1100));
-        const rec: RedemptionRecord = {
-          ...base,
-          status: "simulated",
-          mode: "demo",
-          updatedAt: Date.now(),
-          voucher: { code: `DEMO-${fnv1a(base.id + item.id).toString(16).toUpperCase().padStart(8, "0")}`, isDemo: true },
-        };
-        redemptionStore.set([rec, ...redemptionStore.getSnapshot()]);
-        return rec;
-      }
-
-      // Real path: the wallet must authorise a redeem() call. If it throws (e.g. user rejection) no record is created.
-      const hash = await sendRedeem(w.request, { from: address, contract, amount: item.cost, rewardId: item.id });
-      let rec: RedemptionRecord = { ...base, status: "pending", mode: "onchain", txHash: hash };
+      // Always a clearly-labelled simulation: MissionEV.sol has no redeem or burn, so no tokens move and no transaction exists.
+      await new Promise((r) => setTimeout(r, 1100));
+      const rec: RedemptionRecord = {
+        ...base,
+        status: "simulated",
+        mode: "demo",
+        updatedAt: Date.now(),
+        voucher: { code: `DEMO-${fnv1a(base.id + item.id).toString(16).toUpperCase().padStart(8, "0")}`, isDemo: true },
+      };
       redemptionStore.set([rec, ...redemptionStore.getSnapshot()]);
-      const receipt = await waitForReceipt(w.request, hash);
-      if (receipt) {
-        const ok = receipt.status === "success";
-        patch(base.id, { status: ok ? "completed" : "failed", blockNumber: receipt.blockNumber, updatedAt: Date.now(), error: ok ? undefined : "Transaction reverted on-chain." });
-        rec = redemptionStore.getSnapshot().find((r) => r.id === base.id) ?? rec;
-        if (ok) void refreshOnchain();
-      }
       return rec;
     },
-    [refreshOnchain, contract],
+    [],
   );
-
-  const recheckRecord = useCallback(async (id: string) => {
-    const w = walletRef.current;
-    const r = redemptionStore.getSnapshot().find((x) => x.id === id);
-    if (!r?.txHash || w.mode !== "browser") return;
-    const rc = await getReceipt(w.request, r.txHash).catch(() => null);
-    if (rc) {
-      patch(id, { status: rc.status === "success" ? "completed" : "failed", blockNumber: rc.blockNumber, updatedAt: Date.now(), error: rc.status === "reverted" ? "Transaction reverted on-chain." : undefined });
-      void refreshOnchain();
-    }
-  }, [refreshOnchain]);
 
   const value = useMemo<RewardsContextValue>(
     () => ({
@@ -230,10 +202,9 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       clearSimulated,
       refreshOnchain,
       redeem,
-      recheckRecord,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [summary, active, snap, refreshing, chainError, gas, gasKey, redemptions, stockLeft, grantDemo, clearSimulated, refreshOnchain, redeem, recheckRecord, checks.addressConfigured, checks.realWallet, checks.onPortal, checks.codeFound, checks.balanceReadable],
+    [summary, active, snap, refreshing, chainError, gas, gasKey, redemptions, stockLeft, grantDemo, clearSimulated, refreshOnchain, redeem, checks.addressConfigured, checks.realWallet, checks.onPortal, checks.codeFound, checks.balanceReadable],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

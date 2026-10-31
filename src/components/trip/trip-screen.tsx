@@ -39,7 +39,7 @@ export function TripScreen() {
           role="alert"
           tone="warn"
           icon={<Lock aria-hidden className="size-4" />}
-          title="Registration required"
+          title="Sign-in required"
           actions={
             <Link
               href="/register"
@@ -49,7 +49,7 @@ export function TripScreen() {
             </Link>
           }
         >
-          Trips are tied to your wallet and verified vehicle. Complete Screen 01 first (demo mode works).
+          Trips are tied to your account. Sign in with your mobile number on Screen 01 first (the demo OTP works). A vehicle is optional: metro, bus and walking trips earn too.
         </Alert>
       ) : (
         <div className="flex flex-col gap-6">

@@ -3,17 +3,17 @@
 import { useId, useState } from "react";
 import { CheckCircle2, ChevronDown, CircleDashed, FlaskConical, Loader2, MinusCircle, XCircle } from "lucide-react";
 import { Badge, Panel } from "@/components/ui/primitives";
-import { azureConfigured } from "@/lib/maps/azure";
+import { CONFIGURED_BASEMAP } from "@/lib/maps/provider";
 import { cn, formatClock } from "@/lib/format";
 import type { CheckId, CheckResult } from "@/lib/trip/types";
 import { useTrip } from "@/providers/trip-provider";
 
 const META: Record<CheckId, { title: string; source: string; sourceNote: string; blurb: string }> = {
   "3.1": {
-    title: "Vehicle / RC validation",
-    source: "Vahan registry",
-    sourceNote: "DEMO REGISTRY adapter · live Vahan not connected",
-    blurb: "Registration exists, vehicle type and fuel type match.",
+    title: "Vehicle profile check",
+    source: "Your vehicle profile",
+    sourceNote: "Self-declared on Screen 01 · no registry is contacted",
+    blurb: "Vehicle type, fuel and mileage match your profile. Skipped for metro, bus and walking.",
   },
   "3.2": {
     title: "EV maker ride-log check",
@@ -29,8 +29,8 @@ const META: Record<CheckId, { title: string; source: string; sourceNote: string;
   },
   "3.4": {
     title: "Route validation",
-    source: "Azure Maps",
-    sourceNote: azureConfigured ? "Basemap only · routing API not integrated" : "Not configured · local geometry only",
+    source: "Route geometry",
+    sourceNote: "Local geometry · no routing API integrated",
     blurb: "Route consistency, start/end coordinates, distance, anomalies.",
   },
 };
@@ -167,13 +167,11 @@ export function VerificationEngine() {
       {open && (
         <div id={bodyId} className="space-y-5 p-4 sm:p-6">
           <div className="flex flex-wrap gap-2" aria-label="Integration status">
-            <Badge tone="warn" dot>
-              Vahan · demo registry
-            </Badge>
+            <Badge dot>Vehicle profile · self-declared</Badge>
             <Badge dot>EV maker API · not connected</Badge>
             <Badge dot>D2 · local state</Badge>
-            <Badge tone={azureConfigured ? "cyan" : "neutral"} dot>
-              Azure Maps · {azureConfigured ? "basemap key set, routing not integrated" : "not configured"}
+            <Badge tone="cyan" dot>
+              Map · {CONFIGURED_BASEMAP} basemap, routing not integrated
             </Badge>
           </div>
 
