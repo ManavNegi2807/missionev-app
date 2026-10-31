@@ -73,7 +73,19 @@ npm run contract:compile        # builds contracts/artifacts (committed already)
 npm run dev:chain               # in-memory EVM + the real contract; prints the env vars for .env.local
 npm run dev                     # in another terminal, after copying those env vars
 ```
-Then connect a wallet on chain 420420777 pointing at `http://127.0.0.1:8545`. The dev chain is DEV ONLY (every `from` is unlocked,
+Then connect a wallet on chain 420420777 pointing at `http://127.0.0.1:8545`.
+
+## Deploying the contract to Portal V3 (not done yet)
+
+`scripts/deploy-contract.mjs` (`npm run contract:deploy -- --artifact MissionEVv2.proposed`) is a **dry run unless you pass `--confirm`**.
+It refuses a wrong chain id (must be 420420777), a zero oracle address and a missing key, prints the deployer's tPOT balance and a gas
+estimate, and after broadcasting reads the contract back (code present, `azureOracleSigner`, `owner`, `DOMAIN_SEPARATOR`) before
+reporting success. Run it yourself so the deployer key stays on your machine:
+
+```bash
+DEPLOYER_PRIVATE_KEY=0x…  PORTAL_RPC_URL=https://…  ORACLE_ADDRESS=0x<public address of the NEW oracle key>  npm run contract:deploy -- --artifact MissionEVv2.proposed
+```
+It was tested only against the local dev chain (dry run, guards, a real broadcast with a throwaway key and all read-back checks), never against Portal. The dev chain is DEV ONLY (every `from` is unlocked,
 nothing persists).
 
 ## Tests that were actually run

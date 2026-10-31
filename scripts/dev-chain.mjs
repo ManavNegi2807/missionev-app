@@ -14,7 +14,7 @@ import { createBlock } from "@ethereumjs/block";
 import { Hardfork, Mainnet, createCustomCommon } from "@ethereumjs/common";
 import { createAccount, createAddressFromString, bytesToHex, hexToBytes } from "@ethereumjs/util";
 import { createVM } from "@ethereumjs/vm";
-import { encodeDeployData, keccak256 } from "viem";
+import { encodeDeployData, keccak256, parseTransaction, recoverTransactionAddress } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -84,7 +84,7 @@ async function sendTx(p) {
   const ok = !res.execResult.exceptionError;
   const logs = ok ? (res.execResult.logs ?? []).map((l, i) => toHexLog(l, txHash, b.number, allLogs.length + i)) : [];
   allLogs.push(...logs);
-  receipts.set(txHash, { transactionHash: txHash, transactionIndex: "0x0", blockHash: b.hash, blockNumber: hex(b.number), from, to: p.to?.toLowerCase() ?? null, cumulativeGasUsed: hex(res.execResult.executionGasUsed), gasUsed: hex(res.execResult.executionGasUsed), status: ok ? "0x1" : "0x0", logs, logsBloom: `0x${"0".repeat(512)}`, type: "0x0", effectiveGasPrice: "0x0", contractAddress: null });
+  receipts.set(txHash, { transactionHash: txHash, transactionIndex: "0x0", blockHash: b.hash, blockNumber: hex(b.number), from, to: p.to?.toLowerCase() ?? null, cumulativeGasUsed: hex(res.execResult.executionGasUsed), gasUsed: hex(res.execResult.executionGasUsed), status: ok ? "0x1" : "0x0", logs, logsBloom: `0x${"0".repeat(512)}`, type: "0x0", effectiveGasPrice: "0x0", contractAddress: res.createdAddress ? res.createdAddress.toString() : null });
   return txHash;
 }
 
@@ -103,6 +103,7 @@ async function rpc(method, params = []) {
     case "eth_getCode": { const c = await vm.stateManager.getCode(createAddressFromString(params[0])); return bytesToHex(c); }
     case "eth_call": { const r = await run(params[0].from ?? deployer, params[0].to, params[0].data, { commit: false }); if (r.execResult.exceptionError) throw Object.assign(new Error("execution reverted"), { code: 3, data: bytesToHex(r.execResult.returnValue) }); return bytesToHex(r.execResult.returnValue); }
     case "eth_sendTransaction": return sendTx(params[0]);
+    case "eth_sendRawTransaction": { const tx = parseTransaction(params[0]); const from = await recoverTransactionAddress({ serializedTransaction: params[0] }); if (tx.chainId !== CHAIN_ID) throw new Error(`wrong chain id ${tx.chainId}`); return sendTx({ from, to: tx.to ?? undefined, data: tx.data }); }
     case "eth_getTransactionReceipt": return receipts.get(params[0]) ?? null;
     case "eth_getBlockByNumber": { const n = params[0] === "latest" ? blockNumber : Number.parseInt(params[0], 16); const b = blocks.get(n); return b ? { number: hex(n), hash: b.hash, parentHash: blocks.get(n - 1)?.hash ?? `0x${"0".repeat(64)}`, timestamp: hex(b.timestamp), transactions: [], gasLimit: hex(30_000_000), gasUsed: "0x0", baseFeePerGas: "0x0" } : null; }
     case "eth_getLogs": {
