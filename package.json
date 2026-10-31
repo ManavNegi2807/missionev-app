@@ -10,7 +10,8 @@
     "test": "vitest run",
     "contract:compile": "node scripts/compile-contract.mjs",
     "dev:chain": "node scripts/dev-chain.mjs",
-    "contract:deploy": "node scripts/deploy-contract.mjs"
+    "contract:deploy": "node scripts/deploy-contract.mjs",
+    "contract:verify": "node scripts/verify-deployment.mjs"
   },
   "dependencies": {
     "azure-maps-control": "^3.7.4",

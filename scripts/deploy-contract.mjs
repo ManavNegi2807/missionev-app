@@ -57,6 +57,12 @@ const chainId = await publicClient.getChainId().catch((e) => die(`couldn't reach
 if (chainId !== PORTAL_CHAIN_ID) die(`the RPC reports chain id ${chainId}, but Portal V3 is ${PORTAL_CHAIN_ID}. Refusing to deploy to the wrong network.`);
 const chain = defineChain({ id: chainId, name: "Portal V3 Testnet", nativeCurrency: { name: "tPOT", symbol: "tPOT", decimals: 18 }, rpcUrls: { default: { http: [rpc] } } });
 
+// A node that has stopped following the chain reports old balances and nonces, and a transaction sent through it can land without it ever showing.
+const head = await publicClient.getBlock().catch(() => null);
+const headAge = head ? Math.round(Date.now() / 1000 - Number(head.timestamp)) : null;
+const stale = headAge === null || headAge > 300;
+if (stale) console.log(`WARNING: this RPC's newest block (#${head?.number}) is ${headAge === null ? "unknown" : `${Math.round(headAge / 60)} minutes`} old, so it is not following the chain. Balances and nonces it reports may be stale.\n`);
+if (stale && confirm && !flag("ignore-stale")) die("the RPC is not following the chain (stale head). Sending now could succeed without ever showing up here. Wait for it to recover or use another RPC. (--ignore-stale overrides.)");
 const balance = await publicClient.getBalance({ address: deployer });
 const gasPrice = await publicClient.getGasPrice().catch(() => 0n);
 const initData = encodeDeployData({ abi: artifact.abi, bytecode: artifact.bytecode, args: [getAddress(oracle)] });
@@ -79,7 +85,8 @@ if (!sim.ok || sim.bytes !== expectedBytes) die("the constructor simulation fail
 // Portal V3 prices gas very differently from a normal EVM (cost grows steeply with code size), so check affordability up front.
 if (cost && cost > balance) {
   console.log(`INSUFFICIENT FUNDS: the estimate is ≈ ${formatEther(cost)} tPOT but the deployer holds ${formatEther(balance)} tPOT. The network would reject the transaction.\n`);
-  if (confirm) die("fund the deployer with more tPOT (estimate plus margin) and try again; nothing was sent.");
+  if (confirm && !flag("ignore-estimate")) die("fund the deployer with more tPOT (estimate plus margin) and try again; nothing was sent. (--ignore-estimate sends anyway: an unaffordable transaction is normally rejected before inclusion, but if this chain's real fees differ from its estimate it will go through.)");
+  if (confirm) console.log("--ignore-estimate: sending anyway. The network will reject the transaction without charging if it truly can't be afforded.\n");
 }
 
 if (!confirm) {
@@ -89,7 +96,7 @@ if (!confirm) {
 
 const wallet = createWalletClient({ account, chain, transport: http(rpc, { timeout: 30_000 }) });
 console.log("Broadcasting…");
-const hash = await wallet.deployContract({ abi: artifact.abi, bytecode: artifact.bytecode, args: [getAddress(oracle)] }).catch((e) => die(`deployment was rejected: ${e.shortMessage ?? e.message}`));
+const hash = await wallet.deployContract({ abi: artifact.abi, bytecode: artifact.bytecode, args: [getAddress(oracle)] }).catch((e) => die(`deployment was rejected: ${e.shortMessage ?? e.message}${[e.details, e.cause?.details, e.cause?.message].filter((x, i, a) => x && a.indexOf(x) === i && x !== (e.shortMessage ?? e.message)).map((x) => ` | ${String(x).slice(0, 300)}`).join("")}`));
 console.log(`tx ${hash}\nWaiting for the receipt…`);
 const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 180_000 }).catch((e) => die(`no receipt yet (${e.shortMessage ?? e.message}). The transaction may still confirm: check ${hash} on the explorer before re-running.`));
 if (receipt.status !== "success" || !receipt.contractAddress) die(`the deployment transaction reverted (${hash}).`);
