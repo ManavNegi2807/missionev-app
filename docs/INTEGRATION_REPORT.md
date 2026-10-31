@@ -85,7 +85,15 @@ reporting success. Run it yourself so the deployer key stays on your machine:
 ```bash
 DEPLOYER_PRIVATE_KEY=0x…  PORTAL_RPC_URL=https://…  ORACLE_ADDRESS=0x<public address of the NEW oracle key>  npm run contract:deploy -- --artifact MissionEVv2.proposed
 ```
-It was tested only against the local dev chain (dry run, guards, a real broadcast with a throwaway key and all read-back checks), never against Portal. The dev chain is DEV ONLY (every `from` is unlocked,
+A key-less preview needs only public information: `DEPLOYER_ADDRESS=0x… ORACLE_ADDRESS=0x… PORTAL_RPC_URL=https://… npm run contract:deploy -- --artifact MissionEV`.
+
+**Measured on 2026-10-31 against `https://test-evm-rpc-v3.portaldot.dev` (read-only; nothing was sent):**
+* The RPC is chain id 420420777. Use the `https://` URL: the `http://` one answers `301` and breaks JSON-RPC POSTs (the script now refuses plain http).
+* Both contracts' constructors run correctly on Portal's EVM and return exactly the expected runtime code (4,245 bytes for v1, 5,088 for v2): no opcode-compatibility problem with `evmVersion: paris`.
+* **Gas is metered very differently from a normal EVM.** `eth_estimateGas` returns huge numbers that grow steeply with code size: a plain transfer ≈ 4.8×10¹¹ gas, a 1-byte contract ≈ 13.4 tPOT, v1 ≈ **358 tPOT**, v2 ≈ **425 tPOT** (at the quoted gas price of 25,770 wei). A deployer holding 98.9 tPOT therefore cannot afford either, and the script refuses `--confirm` in that case. These are estimates: the actual fee was not measured because no transaction was sent. Either fund the deployer with roughly 450 tPOT, or measure a real small deployment first.
+* The deployer address supplied had nonce 0 and the oracle address was an unused plain account (no code).
+
+It was tested against the local dev chain (dry run, guards, a real broadcast with a throwaway key and all read-back checks) and, read-only, against Portal. The dev chain is DEV ONLY (every `from` is unlocked,
 nothing persists).
 
 ## Tests that were actually run
