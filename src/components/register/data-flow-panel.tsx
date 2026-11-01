@@ -1,7 +1,7 @@
 import { ArrowDown, Database, MessageSquareText, Smartphone, UserRound } from "lucide-react";
 import { Badge, Panel, PanelHeader } from "@/components/ui/primitives";
 
-/** Compact view of process 1.0 from the Build with Bharat data-flow diagram. */
+/** Compact view of process 1.0 (sign-in and registration) of the MissionEV data flow. */
 function Node({ icon, title, note, badge }: { icon: React.ReactNode; title: string; note: string; badge?: React.ReactNode }) {
   return (
     <li className="flex items-center gap-3 rounded-lg border border-line bg-bg-2/60 p-3">

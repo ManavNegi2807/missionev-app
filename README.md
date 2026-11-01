@@ -2,7 +2,7 @@
 
 *A Strava for carbon.* MissionEV measures the emissions of the journeys people actually make, compares each with a stated
 reference journey, and turns lower-emission travel into **$MEV** rewards through an oracle-signed, wallet-submitted contract call.
-Built for Build with Bharat 5.0 (Microsoft Azure) and Portaldot Hacker House 2026 (Portal Layer 0 EVM).
+Built for the Portaldot Hacker House 2026 (Portal Layer 0 EVM).
 
 > **Reward the impact of the journey, not the ownership of the vehicle.** Each trip asks how you travelled; saved vehicles are only
 > a profile. An EV owner in a petrol cab earns nothing for that ride; a metro commuter with no vehicle can earn.
