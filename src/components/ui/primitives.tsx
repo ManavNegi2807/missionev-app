@@ -95,7 +95,7 @@ export function Badge({
       )}
     >
       {dot && <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", dotClass[tone])} />}
-      <span className="truncate">{children}</span>
+      <span className="min-w-0 break-words">{children}</span>
     </span>
   );
 }
@@ -187,7 +187,7 @@ export function KV({ label, children, mono }: { label: string; children: ReactNo
   return (
     <div className="min-w-0">
       <dt className="section-label">{label}</dt>
-      <dd className={cn("mt-1 truncate text-sm text-fg", mono && "font-mono")}>{children}</dd>
+      <dd className={cn("mt-1 text-sm break-words text-fg", mono && "font-mono")}>{children}</dd>
     </div>
   );
 }

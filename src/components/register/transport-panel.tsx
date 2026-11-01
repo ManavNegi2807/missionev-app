@@ -192,7 +192,7 @@ export function TransportPanel({
                 {vehiclesOf(m).map((v) => (
                   <li key={v.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-bg-2/60 p-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-fg">{vehicleLabel(v)}</p>
+                      <p className="text-sm font-medium break-words text-fg">{vehicleLabel(v)}</p>
                       <p className="mt-0.5 text-xs text-muted [overflow-wrap:anywhere]">
                         <span className="font-mono text-fg">{efficiencyText(v)}</span> · {v.efficiencyNote}
                       </p>

@@ -69,10 +69,10 @@ function CheckCard({ c, running }: { c: CheckResult; running: boolean }) {
         <div className="min-w-0 flex-1">
           <p className="font-mono text-[10.5px] tracking-[0.16em] text-lime">CHECK {c.id}</p>
           <h3 className="mt-0.5 text-sm font-semibold text-fg">{m.title}</h3>
-          <p className="mt-1 truncate text-xs text-muted" title={`${m.source} — ${m.sourceNote}`}>
+          <p className="mt-1 text-xs text-muted" title={`${m.source} — ${m.sourceNote}`}>
             <span className="text-fg/80">SOURCE:</span> {m.source}
           </p>
-          <p className="truncate text-[11px] text-muted/80">{m.sourceNote}</p>
+          <p className="text-[11px] text-muted/80">{m.sourceNote}</p>
         </div>
         <Badge tone={v.tone}>{v.label}</Badge>
       </div>

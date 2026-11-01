@@ -29,13 +29,13 @@ function Kpi({
         <span aria-hidden className="shrink-0">
           {icon}
         </span>
-        <p className="section-label truncate">{label}</p>
+        <p className="section-label min-w-0">{label}</p>
       </div>
-      <p className={cn("mt-2 flex items-baseline gap-1.5 font-mono text-xl leading-none font-semibold sm:text-2xl", color)}>
-        <span className="min-w-0 truncate">{children}</span>
+      <p className={cn("mt-2 flex items-baseline gap-1.5 font-mono text-xl leading-tight font-semibold sm:text-2xl", color)}>
+        <span className="min-w-0 break-words">{children}</span>
         {unit && <span className="shrink-0 text-[11px] font-normal tracking-wider text-muted">{unit}</span>}
       </p>
-      {sub && <p className="mt-2 truncate text-xs text-muted">{sub}</p>}
+      {sub && <p className="mt-2 text-xs leading-snug text-muted">{sub}</p>}
     </div>
   );
 }

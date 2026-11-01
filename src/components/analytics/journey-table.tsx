@@ -110,7 +110,7 @@ export function JourneyTable({ journeys, aliasOf, modeLabel, onReset }: { journe
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 font-medium text-fg">
                     <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: MODES[j.mode].color }} />
-                    <span className="truncate">{MODES[j.mode].label}</span>
+                    <span className="min-w-0 break-words">{MODES[j.mode].label}</span>
                   </p>
                   <p className="truncate text-xs text-muted">{aliasOf(j.userKey)}</p>
                 </div>

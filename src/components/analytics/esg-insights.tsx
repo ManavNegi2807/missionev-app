@@ -102,7 +102,7 @@ export function EsgInsights(p: Props) {
                       <li key={m.id} className="flex items-center justify-between gap-3">
                         <span className="flex min-w-0 items-center gap-2 text-muted">
                           <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: m.color }} />
-                          <span className="truncate">{m.label}</span>
+                          <span className="min-w-0 break-words">{m.label}</span>
                         </span>
                         <span className="font-mono text-fg">{pct(s.share)}</span>
                       </li>

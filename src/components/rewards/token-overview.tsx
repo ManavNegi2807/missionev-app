@@ -12,12 +12,12 @@ import { useWallet } from "@/providers/wallet-provider";
 function Mini({ label, value, unit, sub }: { label: string; value: string; unit?: string; sub?: string }) {
   return (
     <div className="min-w-0 rounded-xl border border-line bg-bg-2/60 p-3">
-      <p className="section-label truncate">{label}</p>
-      <p className="mt-1.5 truncate font-mono text-lg font-semibold text-fg">
+      <p className="section-label">{label}</p>
+      <p className="mt-1.5 font-mono text-lg font-semibold break-words text-fg">
         {value}
         {unit && <span className="ml-1 text-[11px] font-normal text-muted">{unit}</span>}
       </p>
-      {sub && <p className="mt-1 truncate text-[11px] text-muted">{sub}</p>}
+      {sub && <p className="mt-1 text-[11px] leading-snug text-muted">{sub}</p>}
     </div>
   );
 }

@@ -109,7 +109,7 @@ export function SessionPanel() {
                 key={s.id}
                 aria-current={on ? "step" : undefined}
                 className={cn(
-                  "truncate rounded-md border px-2 py-1.5 text-center font-mono text-[11px] tracking-[0.1em] uppercase",
+                  "flex min-h-8 items-center justify-center rounded-md border px-1 py-1.5 text-center font-mono text-[10.5px] leading-tight tracking-[0.06em] uppercase",
                   on ? resultTone : past ? "border-line-strong text-fg" : "border-line text-muted/70",
                 )}
               >
@@ -138,7 +138,7 @@ export function SessionPanel() {
                   )}
                 >
                   {t.icon}
-                  <span className="truncate">{t.label}</span>
+                  <span className="min-w-0 text-center leading-tight">{t.label}</span>
                 </button>
               );
             })}
