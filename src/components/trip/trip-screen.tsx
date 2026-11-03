@@ -10,7 +10,6 @@ import { KpiGrid } from "./kpi-grid";
 import { LedgerPanel } from "./ledger-panel";
 import { MapPanel } from "./map-panel";
 import { SessionPanel } from "./session-panel";
-import { TripDataFlow } from "./trip-data-flow";
 import { TripHistory } from "./trip-history";
 import { TripPipeline } from "./trip-pipeline";
 import { TripSummary } from "./trip-summary";
@@ -45,11 +44,11 @@ export function TripScreen() {
               href="/register"
               className="inline-flex h-8 items-center gap-2 rounded-lg bg-lime px-3 font-mono text-xs tracking-[0.1em] text-bg uppercase hover:shadow-glow-lime"
             >
-              <ArrowLeft aria-hidden className="size-3.5" /> Go to Sign-in &amp; Register
+              <ArrowLeft aria-hidden className="size-3.5" /> Go to Sign-in
             </Link>
           }
         >
-          Trips are tied to your account. Sign in with your mobile number on Screen 01 first (the demo OTP works). A vehicle is optional: metro, bus and walking trips earn too.
+          Trips are tied to your account. Connect MetaMask on Screen 01 first (or pick a demo account). A vehicle is optional: metro, bus and walking trips earn too.
         </Alert>
       ) : (
         <div className="flex flex-col gap-6">
@@ -76,7 +75,6 @@ export function TripScreen() {
               <EmissionsCard />
               <LedgerPanel />
             </div>
-            <TripDataFlow />
             <TripHistory />
           </div>
         </div>

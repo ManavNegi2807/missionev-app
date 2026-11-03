@@ -7,7 +7,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { step: "01", label: "Sign-in & Register", href: "/register", requiresRegistration: false },
+  { step: "01", label: "Sign-in & Profile", href: "/register", requiresRegistration: false },
   { step: "02", label: "Capture Trip", href: "/capture-trip", requiresRegistration: true },
   { step: "03", label: "Rewards & Redeem", href: "/rewards", requiresRegistration: true },
   { step: "04", label: "Analytics & Dashboards", href: "/analytics", requiresRegistration: true },

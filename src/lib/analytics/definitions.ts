@@ -14,5 +14,5 @@ export const DEFINITIONS: Array<{ term: string; text: string }> = [
   { term: "Mobility score", text: "0–100 = 50% clean-journey share + 30% clean streak (capped at 14 days) + 20% share of reference emissions avoided." },
   { term: "Leaderboard ranking rule", text: `Commuters with at least ${MIN_RANKED_JOURNEYS} verified journeys in the period are ranked by mobility score, then avoided emissions, then verified journeys, then alias. Others are listed as unranked.` },
   { term: "$MEV earned", text: "$MEV the MissionEV contract mints for journeys the oracle signed and the commuter's wallet recorded: 20 MEV per kg avoided × a streak multiplier (1×–3×) + a mode bonus. Only lower-emission journeys are signed; petrol and diesel journeys never are. Demo journeys are credited in the browser only and are labelled DEMO. Pending = verified but not recorded yet. $MEV is a prototype reward token, not a certified carbon credit." },
-  { term: "$MEV redeemed", text: "Simulated redemptions (D4). The contract has no redeem or burn function, so nothing is spent on-chain. Native tPOT gas is a separate currency and is never included." },
+  { term: "$MEV redeemed", text: "Simulated redemptions. The contract has no redeem or burn function, so nothing is spent on-chain. Native tPOT gas is a separate currency and is never included." },
 ];

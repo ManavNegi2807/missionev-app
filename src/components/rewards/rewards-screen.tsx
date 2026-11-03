@@ -18,10 +18,9 @@ import { Marketplace } from "./marketplace";
 import { OnchainActivity } from "./onchain-activity";
 import { RedeemModal } from "./redeem-modal";
 import { RewardStats } from "./reward-stats";
-import { RewardsFlow } from "./rewards-flow";
 import { TokenOverview } from "./token-overview";
 
-const STAGES = ["Registered", "Captured", "Verified", "Calculated", "Recorded", "Redeemed"] as const;
+const STAGES = ["Signed in", "Captured", "Verified", "Calculated", "Recorded", "Redeemed"] as const;
 
 function RewardsPipeline() {
   const { isRegistered } = useOnboarding();
@@ -50,7 +49,7 @@ function RewardsPipeline() {
 }
 
 export function RewardsScreen() {
-  const { ready, isRegistered } = useOnboarding();
+  const { ready, isRegistered, registration } = useOnboarding();
   const wallet = useWallet();
   const { toasts, push, dismiss } = useToasts();
   const [item, setItem] = useState<CatalogItem | null>(null);
@@ -74,7 +73,7 @@ export function RewardsScreen() {
           <Wallet aria-hidden className="size-4 shrink-0 text-cyan" />
           {wallet.isConnected ? (
             <>
-              <span className="text-muted">Optional wallet</span>
+              <span className="text-muted">Wallet</span>
               <span className="font-mono text-fg" data-testid="wallet-chip">
                 {shortAddress(wallet.address)}
               </span>
@@ -85,7 +84,9 @@ export function RewardsScreen() {
             </>
           ) : (
             <span className="text-muted">
-              No wallet needed: rewards are tracked on your demo account. Connect a wallet from the account menu only to read a real $MEV balance or redeem on-chain.
+              {registration?.account.method === "wallet"
+                ? "Your wallet is not connected in this tab. Reconnect it from the account menu to read your $MEV balance or redeem on-chain."
+                : "You are on a demo account, so rewards are simulated. Connect MetaMask from the account menu to read a real $MEV balance or redeem on-chain."}
             </span>
           )}
         </div>
@@ -99,11 +100,11 @@ export function RewardsScreen() {
           title="Sign-in required"
           actions={
             <Link href="/register" className="inline-flex h-8 items-center gap-2 rounded-lg bg-lime px-3 font-mono text-xs tracking-[0.1em] text-bg uppercase hover:shadow-glow-lime">
-              <ArrowLeft aria-hidden className="size-3.5" /> Go to Sign-in &amp; Register
+              <ArrowLeft aria-hidden className="size-3.5" /> Go to Sign-in
             </Link>
           }
         >
-          Rewards belong to your account. Sign in with your mobile number on Screen 01 first (the demo OTP works).
+          Rewards belong to your account. Connect MetaMask on Screen 01 first (or pick a demo account).
         </Alert>
       ) : (
         <>
@@ -112,7 +113,6 @@ export function RewardsScreen() {
           <Marketplace onRedeem={setItem} />
           <HistorySection onOpen={setDrawerId} />
           <OnchainActivity />
-          <RewardsFlow />
         </>
       )}
 

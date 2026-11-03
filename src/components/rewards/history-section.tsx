@@ -29,7 +29,7 @@ export function HistorySection({ onOpen }: { onOpen: (id: string) => void }) {
     <Panel aria-labelledby="hist-title">
       <PanelHeader
         id="hist-title"
-        eyebrow="D4 · Redemptions"
+        eyebrow="Redemptions"
         title="Redemption history"
         subtitle="Local records for this browser tab. Select a row for its transaction / detail drawer."
         action={
@@ -71,7 +71,7 @@ export function HistorySection({ onOpen }: { onOpen: (id: string) => void }) {
         <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
           <History aria-hidden className="size-8 text-muted" />
           <p className="text-sm font-medium text-fg">{filtered ? "No redemptions match these filters." : "No redemptions yet."}</p>
-          <p className="max-w-sm text-sm text-muted">{filtered ? "Try another status or category." : "Redeem a reward above and its D4 record will appear here."}</p>
+          <p className="max-w-sm text-sm text-muted">{filtered ? "Try another status or category." : "Redeem a reward above and its record will appear here."}</p>
           {filtered && (
             <Button
               size="sm"

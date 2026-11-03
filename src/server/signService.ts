@@ -16,7 +16,7 @@ import type { ServerConfig } from "./config";
  * recomputes the distance from the location samples, recalculates the emissions with the shared carbon engine, applies the
  * reward policy, then signs only the figures it derived itself. Everything the contract trusts the oracle for happens here.
  *
- * Known limits (documented, not hidden): the commuter's saved vehicle is self-declared (there is no server-side D1 to
+ * Known limits (documented, not hidden): the commuter's saved vehicle is self-declared (there is no server-side user store to
  * check it against), GPS can be spoofed by a device that controls its own location, and the rate-limit and
  * duplicate memory below live in process memory, so a serverless restart forgets them. The contract's own
  * `processedTrips` and nonce still stop on-chain replays.

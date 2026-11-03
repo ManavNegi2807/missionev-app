@@ -36,7 +36,7 @@ export function EmissionsCard() {
     <Panel aria-labelledby="calc-title">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-4 sm:px-6">
         <div>
-          <p className="section-label mb-1">Process 4.0 · Calculate CO₂ &amp; reward</p>
+          <p className="section-label mb-1">Calculate CO₂ &amp; reward</p>
           <h2 id="calc-title" className="text-[15px] font-semibold tracking-[0.06em] uppercase">
             Carbon comparison
           </h2>

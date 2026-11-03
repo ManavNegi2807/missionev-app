@@ -33,7 +33,7 @@ export function JourneyTable({ journeys, aliasOf, modeLabel, onReset }: { journe
     <Panel aria-labelledby="journeys-title" data-section="journeys">
       <PanelHeader
         id="journeys-title"
-        eyebrow="D2 · Trips & telemetry (aggregate view)"
+        eyebrow="Trips · aggregate view"
         title="Journey ledger"
         subtitle={`${modeLabel} · no coordinates or vehicle registration numbers are shown. Unverified journeys never count toward impact totals.`}
       />

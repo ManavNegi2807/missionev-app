@@ -1,6 +1,6 @@
 /**
  * Shared reward + redemption data model.
- * D3 (Smart-contract Ledger) feeds rewards in; D4 (Redemptions) stores what the commuter redeems (simulated: the contract has no redeem).
+ * The smart-contract ledger feeds rewards in; redemptions store what the commuter redeems (simulated: the contract has no redeem).
  * Later analytics screens can aggregate `RedemptionRecord` and `RewardEvent` directly.
  */
 export type RedemptionStatus = "pending" | "completed" | "failed" | "simulated";

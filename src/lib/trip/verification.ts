@@ -161,7 +161,7 @@ export function checkRideLog(ctx: VerifyContext): CheckResult {
   };
 }
 
-/* ---------------- 3.3 Motion & GPS (D2 Trips & Telemetry) ---------------- */
+/* ---------------- 3.3 Motion & GPS ---------------- */
 export function checkMotion(ctx: VerifyContext): CheckResult {
   const s = ctx.samples;
   const speedClass = speedClassOf(ctx.mode, ctx.vehicle?.spec.body);
@@ -229,7 +229,7 @@ export function checkMotion(ctx: VerifyContext): CheckResult {
           : "Simulated samples satisfy the local rules (DEMO — not real GPS).",
     items,
     technical: {
-      store: "D2 · frontend state",
+      store: "frontend state",
       samples: s.length,
       maxGapSec: Math.round(maxGapSec),
       duplicateTimestampPct: Number((dupShare * 100).toFixed(2)),

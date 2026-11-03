@@ -18,7 +18,7 @@ export function DetailDrawer({ id, onClose }: { id: string; onClose: () => void 
   const link = r?.txHash && PORTAL_V3.explorerUrl ? `${PORTAL_V3.explorerUrl.replace(/\/$/, "")}/tx/${r.txHash}` : null;
 
   return (
-    <Drawer title="Redemption record" eyebrow="D4 · Redemptions" labelId={labelId} onClose={onClose}>
+    <Drawer title="Redemption record" eyebrow="Redemption" labelId={labelId} onClose={onClose}>
       {!r ? (
         <p className="text-sm text-muted">This record no longer exists (it may have been reset).</p>
       ) : (

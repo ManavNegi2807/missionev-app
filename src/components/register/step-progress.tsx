@@ -1,8 +1,9 @@
 import { cn } from "@/lib/format";
 
-const TOTAL = 7;
+/** One step per screen in the sidebar workflow: sign-in, capture trip, rewards, analytics. */
+const TOTAL = 4;
 
-export function StepProgress({ step = 1, label = "ACCOUNT INITIALIZATION" }: { step?: number; label?: string }) {
+export function StepProgress({ step = 1, label = "SIGN IN & TRANSPORT PROFILE" }: { step?: number; label?: string }) {
   return (
     <div
       role="progressbar"

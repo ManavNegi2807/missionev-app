@@ -1,14 +1,16 @@
 /**
- * Network configuration. Portal V3 is the only network MissionEV accepts for
- * real wallets. The RPC URL / currency are intentionally read from env so we
- * never ship guessed network parameters; without them the app can still
- * *switch* to the chain if the wallet already knows it, but won't try to add it.
+ * Network configuration. Portal V3 is the only network MissionEV accepts for real wallets.
+ *
+ * The chain id, EVM endpoint and currency are the organisers' published testnet values, so MetaMask can be asked to add
+ * the network with no setup (environment variables still override them). The explorer address is left empty on purpose:
+ * transaction links are built as `<explorer>/tx/<hash>`, and the Portaldot node console is not known to use that scheme,
+ * so a guessed default would produce dead links.
  */
 export const PORTAL_V3 = {
   chainId: 420420777,
   name: "Portal V3 Testnet",
   shortName: "Portal V3",
-  rpcUrl: process.env.NEXT_PUBLIC_PORTAL_RPC_URL ?? "",
+  rpcUrl: process.env.NEXT_PUBLIC_PORTAL_RPC_URL || "https://test-evm-rpc-v3.portaldot.dev",
   explorerUrl: process.env.NEXT_PUBLIC_PORTAL_EXPLORER_URL ?? "",
   /** tPOT is the native gas currency on Portal V3 testnet ($MEV is the separate reward token). */
   currencySymbol: process.env.NEXT_PUBLIC_PORTAL_CURRENCY_SYMBOL || "tPOT",

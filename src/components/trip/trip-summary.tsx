@@ -30,7 +30,7 @@ export function TripSummary() {
     <Panel aria-labelledby="summary-title2">
       <PanelHeader
         id="summary-title2"
-        eyebrow="Process 2.0 → D2"
+        eyebrow="Trip summary"
         title="Trip summary"
         action={
           record ? (

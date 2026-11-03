@@ -118,7 +118,7 @@ export interface Notice {
   offerSimulation?: boolean;
 }
 
-/* ---- D2 · Trips & Telemetry (session history; routes are stripped, coordinates rounded) ---- */
+/* ---- Trips (session history; routes are stripped, coordinates rounded) ---- */
 const historyStore = createSessionStore<TripRecord[]>("missionev:d2:trips", []);
 const persistable = (r: TripRecord): TripRecord => {
   const copy = { ...r };

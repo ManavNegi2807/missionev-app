@@ -2,7 +2,7 @@
 
 import { ArrowRight, CheckCircle2, Circle, FlaskConical, RotateCcw } from "lucide-react";
 import { Alert, Badge, Button, Panel, PanelHeader } from "@/components/ui/primitives";
-import { cn } from "@/lib/format";
+import { cn, shortAddress } from "@/lib/format";
 import { MODE_INFO, vehicleLabel } from "@/lib/transport/profile";
 import type { RegistrationRecord } from "@/providers/onboarding-provider";
 
@@ -39,9 +39,10 @@ export function SummaryPanel({
   onReset: () => void;
 }) {
   const t = account?.transport ?? null;
+  const isWallet = account?.account.method === "wallet";
 
   const checks = [
-    { label: "Mobile number verified", done: account !== null },
+    { label: isWallet || !account ? "Signed in with your wallet" : "Signed in with a demo account", done: account !== null },
     { label: "Transport profile saved", done: t !== null },
   ];
   const doneCount = checks.filter((c) => c.done).length;
@@ -49,12 +50,12 @@ export function SummaryPanel({
 
   return (
     <Panel glass aria-labelledby="summary-title" className="lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
-      <PanelHeader id="summary-title" eyebrow="Process 1.0" title="Account summary" />
+      <PanelHeader id="summary-title" eyebrow="Step 1" title="Account summary" />
 
       <div className="divide-y divide-line">
         <Group title="Account" tone={account ? "ok" : "neutral"} status={account ? "Signed in" : "Signed out"}>
-          <Row label="Mobile">
-            <span className="font-mono">{account?.phone.masked ?? "—"}</span>
+          <Row label="Wallet">
+            <span className="font-mono">{account ? (isWallet ? shortAddress(account.wallet.address) : "Demo account") : "—"}</span>
           </Row>
           <Row label="User">
             <span className="font-mono">{account?.userId ?? "—"}</span>
@@ -95,10 +96,10 @@ export function SummaryPanel({
       </div>
 
       <div className="space-y-3 border-t border-line p-4 sm:p-6">
-        {account && (
+        {account?.isDemoData && (
           <div className="flex items-center gap-2 rounded-lg border border-warn/35 bg-warn/[0.07] px-3 py-2">
             <FlaskConical aria-hidden className="size-4 shrink-0 text-warn" />
-            <p className="font-mono text-[11px] tracking-[0.12em] text-warn">DEMO DATA — OTP IS SIMULATED</p>
+            <p className="font-mono text-[11px] tracking-[0.12em] text-warn">DEMO ACCOUNT — NOTHING IS ON-CHAIN</p>
           </div>
         )}
 
@@ -122,7 +123,7 @@ export function SummaryPanel({
               Continue to capture trip
             </Button>
             <p id="signin-blocked" className="text-center text-xs text-muted">
-              Sign in with your mobile number to continue.
+              Connect MetaMask, or use a demo account, to continue.
             </p>
           </>
         )}

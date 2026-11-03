@@ -66,7 +66,7 @@ export function EsgInsights(p: Props) {
     <Panel aria-labelledby="esg-title" data-section="esg">
       <PanelHeader
         id="esg-title"
-        eyebrow="Process 7.0 → Companies & city planners"
+        eyebrow="For companies & city planners"
         title="Urban mobility / ESG insights"
         subtitle={`${p.scopeNote}. Aggregate figures only — no trip coordinates or vehicle identifiers.`}
         action={<Badge tone="warn" dot>Demo report</Badge>}

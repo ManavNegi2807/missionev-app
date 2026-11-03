@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { POST as otpRequest } from "@/app/api/auth/otp/request/route";
-import { POST as otpVerify } from "@/app/api/auth/otp/verify/route";
 import { POST as calculate } from "@/app/api/trips/calculate/route";
 import { POST as signTrip } from "@/app/api/sign-trip/route";
 import { integrationStatus, readConfig } from "@/server/config";
@@ -24,6 +22,9 @@ describe("server configuration", () => {
   it("says receipt OCR runs in the browser, so no server setting or image upload is involved", () => {
     expect(integrationStatus(readConfig({})).ocr).toEqual({ engine: "tesseract.js", runsIn: "browser" });
   });
+  it("has no phone or OTP sign-in left: the account is a wallet address", () => {
+    expect(Object.keys(integrationStatus(readConfig({})))).not.toContain("otp");
+  });
   it("ignores malformed keys and addresses instead of half-using them", () => {
     const c = readConfig({ ORACLE_PRIVATE_KEY: "0x1234", MISSIONEV_CONTRACT_ADDRESS: "nope", PORTAL_RPC_URL: "ftp://x" });
     expect(c).toMatchObject({ oracleKey: null, contract: null, rpcUrl: null });
@@ -41,15 +42,6 @@ describe("server configuration", () => {
 });
 
 describe("route handlers", () => {
-  it("OTP is a labelled demo: validates the number, never claims SMS delivery, checks the OTP on the server", async () => {
-    const bad = await otpRequest(post({ phone: "123" }));
-    expect(bad.status).toBe(400);
-    const ok = await otpRequest(post({ phone: "9876543210" }));
-    expect(await ok.json()).toMatchObject({ status: "sent", delivery: "demo" });
-    expect((await otpVerify(post({ phone: "9876543210", otp: "000000" }))).status).toBe(401);
-    const verified = await otpVerify(post({ phone: "9876543210", otp: "123456" }));
-    expect(await verified.json()).toMatchObject({ status: "verified", delivery: "demo", authenticated: false });
-  });
   it("calculate runs the shared engine and refuses a vehicle that doesn't match the mode", async () => {
     const ok = await calculate(post({ mode: "metro", distanceKm: 10 }));
     expect(ok.status).toBe(200);

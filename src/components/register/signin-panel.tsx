@@ -1,100 +1,62 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, FlaskConical, LogOut, MessageSquareText, Pencil, Smartphone } from "lucide-react";
-import { TextField } from "@/components/ui/fields";
+import { useState } from "react";
+import { AlertTriangle, Check, CheckCircle2, Copy, FlaskConical, LogOut, ShieldCheck, Wallet } from "lucide-react";
+import { WalletError } from "@/components/shell/wallet-error";
 import { Alert, Badge, Button, KV, Panel, PanelHeader } from "@/components/ui/primitives";
-import { checkOtp, DEMO_OTP, normalizeOtp, normalizePhone, OTP_LENGTH, sendOtp, validatePhone } from "@/lib/auth";
-import { formatTimestamp } from "@/lib/format";
-import type { RegistrationRecord } from "@/providers/onboarding-provider";
-
-/** "98765 43210" for readability; the state always holds the 10 plain digits. */
-const display = (digits: string) => (digits.length > 5 ? `${digits.slice(0, 5)} ${digits.slice(5)}` : digits);
+import { PORTAL_V3 } from "@/lib/chain";
+import { formatTimestamp, shortAddress } from "@/lib/format";
+import type { RegistrationRecord, SignInInput } from "@/providers/onboarding-provider";
+import { DEMO_ADDRESS, useWallet } from "@/providers/wallet-provider";
 
 export function SigninPanel({
   account,
-  onVerified,
+  onSignIn,
   onSignOut,
 }: {
   account: RegistrationRecord | null;
-  /** Called with the verified 10-digit number once the OTP matches. */
-  onVerified: (phone: string) => Promise<void>;
+  onSignIn: (input: SignInInput) => Promise<void> | void;
   onSignOut: () => void;
 }) {
-  const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [phoneTouched, setPhoneTouched] = useState(false);
-  const [busy, setBusy] = useState<"send" | "verify" | null>(null);
-  const [otpError, setOtpError] = useState<string | undefined>();
-  const abortRef = useRef<AbortController | null>(null);
+  const w = useWallet();
+  const [copied, setCopied] = useState(false);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
-
-  const phoneError = validatePhone(phone);
-  const showPhoneError = phoneTouched ? phoneError : undefined;
-  const [sendError, setSendError] = useState<string | undefined>();
-
-  const send = async () => {
-    setPhoneTouched(true);
-    if (phoneError) return;
-    abortRef.current?.abort();
-    const c = new AbortController();
-    abortRef.current = c;
-    setBusy("send");
-    try {
-      setSendError(undefined);
-      await sendOtp(phone, c.signal);
-      setOtp("");
-      setOtpError(undefined);
-      setStep("otp");
-    } catch (e) {
-      if ((e as Error).name !== "AbortError") setSendError((e as Error).message || "Couldn't send the OTP. Try again.");
-    } finally {
-      if (abortRef.current === c) setBusy(null);
-    }
+  const connectMetaMask = async () => {
+    const connected = await w.connect();
+    if (connected) await onSignIn({ method: "wallet", address: connected.address, chainId: connected.chainId ?? PORTAL_V3.chainId });
+  };
+  const continueAsDemo = async () => {
+    // A demo account never has a wallet behind it, so let go of one that is still attached to this tab.
+    if (w.mode === "browser") await w.disconnect();
+    await onSignIn({ method: "demo", address: DEMO_ADDRESS, chainId: PORTAL_V3.chainId });
   };
 
-  const verify = async () => {
-    if (otp.length !== OTP_LENGTH) {
-      setOtpError(`Enter the ${OTP_LENGTH}-digit OTP.`);
-      return;
-    }
-    abortRef.current?.abort();
-    const c = new AbortController();
-    abortRef.current = c;
-    setBusy("verify");
-    setOtpError(undefined);
+  const copy = async () => {
+    if (!account) return;
     try {
-      const res = await checkOtp(phone, otp, c.signal);
-      if (!res.ok) {
-        setOtpError(res.message);
-        return;
-      }
-      await onVerified(phone);
-      setStep("phone");
-      setPhone("");
-      setOtp("");
-      setPhoneTouched(false);
-    } catch (e) {
-      if ((e as Error).name !== "AbortError") setOtpError("Couldn't verify the OTP. Try again.");
-    } finally {
-      if (abortRef.current === c) setBusy(null);
+      await navigator.clipboard.writeText(account.wallet.address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
     }
   };
 
   const signedIn = account !== null;
+  const isWallet = account?.account.method === "wallet";
+  const wrongNetwork = isWallet && w.isConnected && !w.isDemo && !w.onExpectedChain;
+  const walletAway = isWallet && !w.isConnected;
 
   return (
     <Panel aria-labelledby="signin-title">
       <PanelHeader
         id="signin-title"
         eyebrow="Step 1 · Sign in"
-        title="Mobile sign-in"
-        subtitle="Sign in with just your mobile number. It doesn't need to be registered anywhere first."
+        title="Sign in with your wallet"
+        subtitle={signedIn ? undefined : "Your wallet address is your account: no password, no phone number, nothing to type."}
         action={
-          <Badge tone={signedIn ? "ok" : "warn"} dot>
-            {signedIn ? "Signed in" : "Demo OTP"}
+          <Badge tone={signedIn ? "ok" : "cyan"} dot>
+            {signedIn ? "Signed in" : "MetaMask"}
           </Badge>
         }
       />
@@ -107,114 +69,86 @@ export function SigninPanel({
                 <CheckCircle2 aria-hidden className="size-6" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-fg">Signed in</p>
-                <p className="mt-0.5 font-mono text-xs text-muted">{account.phone.masked}</p>
+                <p className="text-sm font-medium text-fg">{isWallet ? "Signed in with MetaMask" : "Signed in with a demo account"}</p>
+                <p className="mt-0.5 font-mono text-xs text-muted">{isWallet ? shortAddress(account.wallet.address) : "No wallet · nothing is on-chain"}</p>
               </div>
+              {isWallet && (
+                <Button variant="ghost" onClick={() => void copy()} icon={copied ? <Check aria-hidden className="size-4 text-ok" /> : <Copy aria-hidden className="size-4" />}>
+                  {copied ? "Copied" : "Copy address"}
+                </Button>
+              )}
               <Button variant="danger" onClick={onSignOut} icon={<LogOut aria-hidden className="size-4" />}>
                 Sign out
               </Button>
             </div>
+
             <dl className="grid grid-cols-2 gap-x-4 gap-y-4 rounded-xl border border-line bg-bg-2/60 p-4">
-              <KV label="Mobile">{account.phone.masked}</KV>
+              <KV label="Account">{isWallet ? "MetaMask wallet" : "Demo account"}</KV>
               <KV label="User" mono>
                 {account.userId}
               </KV>
-              <KV label="Verified with">Demo OTP</KV>
-              <KV label="Signed in at">{formatTimestamp(account.phone.verifiedAt)}</KV>
+              <KV label="Network">
+                {isWallet
+                  ? w.isConnected
+                    ? w.onExpectedChain
+                      ? `${PORTAL_V3.shortName} · ${PORTAL_V3.chainId}`
+                      : `${w.networkName} · ${w.chainId}`
+                    : "Wallet not connected"
+                  : "Simulated"}
+              </KV>
+              <KV label="Signed in at">{formatTimestamp(account.account.signedInAt)}</KV>
             </dl>
+
+            {wrongNetwork && (
+              <Alert
+                role="status"
+                tone="warn"
+                icon={<AlertTriangle aria-hidden className="size-4" />}
+                title="Switch to Portal V3"
+                actions={
+                  <Button size="sm" variant="primary" onClick={() => void w.switchNetwork()}>
+                    Switch to {PORTAL_V3.shortName}
+                  </Button>
+                }
+              >
+                Your wallet is on {w.networkName}. MissionEV records trips on {PORTAL_V3.name} (chain {PORTAL_V3.chainId}); your wallet will offer to add it if it is missing.
+              </Alert>
+            )}
+            {walletAway && (
+              <Alert
+                role="status"
+                tone="warn"
+                icon={<AlertTriangle aria-hidden className="size-4" />}
+                title="Wallet not connected"
+                actions={
+                  <Button size="sm" variant="primary" loading={w.connecting} icon={<Wallet aria-hidden className="size-3.5" />} onClick={() => void w.connect()}>
+                    Reconnect
+                  </Button>
+                }
+              >
+                You are still signed in here, but the wallet is not connected in this tab. Reconnect to read your balance or record trips.
+              </Alert>
+            )}
+            <WalletError />
           </>
-        ) : step === "phone" ? (
-          <form
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              void send();
-            }}
-            className="space-y-4"
-          >
-            <TextField
-              label="Mobile number"
-              required
-              mono
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel-national"
-              placeholder="98765 43210"
-              value={display(phone)}
-              error={showPhoneError ?? sendError}
-              hint="10-digit Indian mobile number. Only a masked form is kept, in this tab."
-              onChange={(e) => {
-                setPhone(normalizePhone(e.target.value));
-                setSendError(undefined);
-              }}
-              onBlur={() => setPhoneTouched(true)}
-            />
-            <Button type="submit" variant="primary" size="lg" loading={busy === "send"} icon={<MessageSquareText aria-hidden className="size-4" />} className="w-full sm:w-auto">
-              {busy === "send" ? "Sending…" : "Send OTP"}
-            </Button>
-          </form>
         ) : (
-          <form
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              void verify();
-            }}
-            className="space-y-4"
-          >
-            <p className="text-sm text-muted">
-              OTP for <span className="font-mono text-fg">+91 {display(phone)}</span>
+          <>
+            <Button variant="primary" size="lg" loading={w.connecting} icon={<Wallet aria-hidden className="size-4" />} onClick={() => void connectMetaMask()} className="w-full sm:w-auto">
+              {w.connecting ? "Waiting for MetaMask…" : "Connect MetaMask"}
+            </Button>
+            <WalletError />
+            <p className="flex items-start gap-2 text-xs leading-relaxed text-muted">
+              <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-ok" />
+              Connecting shares only your public address. MissionEV never sees your seed phrase or private key and cannot move your funds, and signing in costs no gas.
             </p>
-            <Alert tone="warn" icon={<FlaskConical aria-hidden className="size-4" />} title="DEMO OTP — no SMS is sent">
-              Enter <span className="font-mono text-fg">{DEMO_OTP}</span> to sign in. A real build would text a one-time code to this number.
-              <button
-                type="button"
-                onClick={() => {
-                  setOtp(DEMO_OTP);
-                  setOtpError(undefined);
-                }}
-                className="ml-2 text-cyan hover:underline"
-              >
-                Fill it in
-              </button>
-            </Alert>
-            <TextField
-              label="One-time password"
-              required
-              mono
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              placeholder={"•".repeat(OTP_LENGTH)}
-              maxLength={OTP_LENGTH}
-              value={otp}
-              error={otpError}
-              onChange={(e) => {
-                setOtp(normalizeOtp(e.target.value));
-                setOtpError(undefined);
-              }}
-            />
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Button type="submit" variant="primary" size="lg" loading={busy === "verify"} icon={<Smartphone aria-hidden className="size-4" />} className="w-full sm:w-auto">
-                {busy === "verify" ? "Verifying…" : "Verify & sign in"}
-              </Button>
-              <Button variant="ghost" onClick={() => void send()} disabled={busy !== null}>
-                Resend OTP
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setStep("phone");
-                  setOtp("");
-                  setOtpError(undefined);
-                }}
-                disabled={busy !== null}
-                icon={<Pencil aria-hidden className="size-3.5" />}
-              >
-                Change number
+
+            <div className="space-y-3 border-t border-line pt-4">
+              <p className="text-sm leading-relaxed text-muted">No wallet? Look around with a demo account. Everything is simulated and nothing goes on-chain.</p>
+              <Button variant="secondary" icon={<FlaskConical aria-hidden className="size-4" />} onClick={() => void continueAsDemo()}>
+                Explore with a demo account
               </Button>
             </div>
-          </form>
+          </>
         )}
       </div>
     </Panel>

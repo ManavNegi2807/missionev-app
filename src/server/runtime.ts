@@ -4,7 +4,7 @@ import { createMemoryStore, type SignStore } from "./signService";
 
 /**
  * Per-process singletons for the route handlers. The sign store and the signed-trip log are in memory: they stand in for
- * the database (D2/D3) the architecture plans, and they reset when the process restarts.
+ * the database the architecture plans, and they reset when the process restarts.
  */
 export interface SignedLogEntry {
   tripId: string;

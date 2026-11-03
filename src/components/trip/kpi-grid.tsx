@@ -101,7 +101,7 @@ export function KpiGrid() {
         label="Trust level"
         icon={<BadgeCheck className="size-4" />}
         tone={trust ? (trust.assigned ? "lime" : "err") : "muted"}
-        sub={trust ? (trust.assigned ? `stage 4.0 · ${trust.tier} tier${trust.isDemo ? " · DEMO" : ""}` : "not verified") : "assigned after verification"}
+        sub={trust ? (trust.assigned ? `${trust.tier} tier${trust.isDemo ? " · DEMO" : ""}` : "not verified") : "assigned after verification"}
       >
         {trust ? (trust.assigned ? "4.0" : <span className="text-base sm:text-lg">NOT VERIFIED</span>) : "—"}
       </Kpi>

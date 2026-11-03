@@ -32,7 +32,7 @@ function Step({ n, title, state, children }: { n: number; title: string; state: 
   );
 }
 
-/** Process 5.0. DEMO journeys are credited in this browser only; LIVE journeys go oracle signature → the commuter's own wallet → the contract. */
+/** DEMO journeys are credited in this browser only; LIVE journeys go oracle signature → the commuter's own wallet → the contract. */
 export function LedgerPanel() {
   const { record, status, claimDemo, requestSignature, submitOnChain } = useTrip();
   const wallet = useWallet();
@@ -75,7 +75,7 @@ export function LedgerPanel() {
     <Panel aria-labelledby="ledger-title" className="border-lime/20">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-4 sm:px-6">
         <div className="min-w-0">
-          <p className="section-label mb-1">Process 5.0 · Record on-chain → D3</p>
+          <p className="section-label mb-1">Record on-chain</p>
           <h2 id="ledger-title" className="text-[15px] font-semibold tracking-[0.06em] uppercase">
             Portal Layer 0 / smart contract ledger
           </h2>

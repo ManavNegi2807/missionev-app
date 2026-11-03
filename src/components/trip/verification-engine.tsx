@@ -23,7 +23,7 @@ const META: Record<CheckId, { title: string; source: string; sourceNote: string;
   },
   "3.3": {
     title: "Motion & GPS validation",
-    source: "D2 Trips & Telemetry",
+    source: "Trip telemetry",
     sourceNote: "Local rules over frontend state",
     blurb: "Sample completeness, movement, distance plausibility, replay.",
   },
@@ -146,7 +146,7 @@ export function VerificationEngine() {
     <Panel aria-labelledby="engine-title">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-4 sm:px-6">
         <div className="min-w-0">
-          <p className="section-label mb-1">Process 3.0 · Verify trip</p>
+          <p className="section-label mb-1">Verify trip</p>
           <h2 id="engine-title" className="text-[15px] font-semibold tracking-[0.06em] uppercase">
             Trip authenticity engine
           </h2>
@@ -169,7 +169,7 @@ export function VerificationEngine() {
           <div className="flex flex-wrap gap-2" aria-label="Integration status">
             <Badge dot>Vehicle profile · self-declared</Badge>
             <Badge dot>EV maker API · not connected</Badge>
-            <Badge dot>D2 · local state</Badge>
+            <Badge dot>Local state</Badge>
             <Badge tone="cyan" dot>
               Map · {CONFIGURED_BASEMAP} basemap, routing not integrated
             </Badge>

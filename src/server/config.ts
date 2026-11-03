@@ -46,7 +46,6 @@ export interface IntegrationStatus {
   oracle: { configured: boolean };
   /** Receipt OCR needs no server settings: Tesseract.js runs in the browser and the image never reaches the server. */
   ocr: { engine: "tesseract.js"; runsIn: "browser" };
-  otp: { delivery: "demo"; note: string };
   missing: string[];
 }
 
@@ -63,7 +62,6 @@ export function integrationStatus(cfg: ServerConfig): IntegrationStatus {
     rpc: { configured: Boolean(cfg.rpcUrl) },
     oracle: { configured: Boolean(cfg.oracleKey) },
     ocr: { engine: "tesseract.js", runsIn: "browser" },
-    otp: { delivery: "demo", note: "No SMS provider is configured. The OTP is a fixed demo value and no message is sent." },
     missing,
   };
 }

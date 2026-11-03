@@ -12,7 +12,7 @@ import {
 import type { Confidence, ConsumptionBasis, EfficiencySource, JourneyMode, Powertrain, VehicleBody, VehicleEnergySpec } from "@/lib/carbon/types";
 import { findEntry, type CatalogEntry } from "./catalog";
 
-/** The commuter's saved transport profile (D1). It describes what they use; each journey chooses its own mode separately. */
+/** The commuter's saved transport profile. It describes what they use; each journey chooses its own mode separately. */
 
 export const VEHICLE_MODES = ["private_ev_car", "private_ev_2w", "private_petrol_car", "private_diesel_car", "private_ice_2w"] as const;
 export type VehicleModeId = (typeof VEHICLE_MODES)[number];

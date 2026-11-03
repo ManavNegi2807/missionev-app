@@ -243,7 +243,7 @@ export function VehicleForm({
       {!ev && (
         <div className="flex items-start gap-2.5 rounded-xl border border-line bg-bg-2/50 px-3.5 py-3 text-xs leading-relaxed text-muted">
           <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-cyan" />
-          <p>{`${powertrain === "diesel" ? "Diesel" : "Petrol"} journeys are measured for your footprint but earn no $MEV. Registering the vehicle never earns credit by itself.`}</p>
+          <p>{`${powertrain === "diesel" ? "Diesel" : "Petrol"} journeys are measured for your footprint but earn no $MEV. Saving a vehicle never earns credit by itself.`}</p>
         </div>
       )}
 

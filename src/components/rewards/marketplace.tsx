@@ -39,7 +39,7 @@ export function Marketplace({ onRedeem }: { onRedeem: (item: CatalogItem) => voi
     <section aria-labelledby="market-title" className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="section-label mb-1.5">Process 6.0 · Redemption marketplace</p>
+          <p className="section-label mb-1.5">Redemption marketplace</p>
           <h2 id="market-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Choose your next green benefit.
           </h2>

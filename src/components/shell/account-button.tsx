@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
-import { Check, ChevronDown, Copy, LogIn, LogOut, Unplug, UserRound, Wallet } from "lucide-react";
+import { Check, ChevronDown, Copy, LogOut, UserRound, Wallet } from "lucide-react";
 import { Badge, Button } from "@/components/ui/primitives";
+import { PORTAL_V3 } from "@/lib/chain";
 import { cn, fnv1a, shortAddress } from "@/lib/format";
 import { useOnboarding } from "@/providers/onboarding-provider";
 import { useWallet } from "@/providers/wallet-provider";
@@ -22,8 +23,8 @@ function Avatar({ seed }: { seed: string }) {
 }
 
 /**
- * Top-bar account control. Sign-in is by mobile number (see Screen 01); a browser wallet is an optional extra,
- * only needed to read a real $MEV balance or redeem on-chain.
+ * Top-bar account control. The account is the connected wallet (or a demo account with no wallet); see Screen 01.
+ * Connecting a wallet from here upgrades a demo account, and the onboarding provider keeps the two in step.
  */
 export function AccountButton() {
   const w = useWallet();
@@ -45,16 +46,19 @@ export function AccountButton() {
         href="/register"
         className="inline-flex h-9 items-center gap-2 rounded-lg bg-lime px-3 font-mono text-xs tracking-[0.1em] text-bg uppercase hover:bg-lime-strong hover:shadow-glow-lime sm:px-4"
       >
-        <LogIn aria-hidden className="size-4" />
-        Sign in
+        <Wallet aria-hidden className="size-4" />
+        <span className="sm:hidden">Sign in</span>
+        <span className="hidden sm:inline">Connect wallet</span>
       </Link>
     );
   }
 
+  const isWallet = registration.account.method === "wallet";
+  const walletLive = isWallet && w.isConnected && !w.isDemo;
+
   const copy = async () => {
-    if (!w.address) return;
     try {
-      await navigator.clipboard.writeText(w.address);
+      await navigator.clipboard.writeText(registration.wallet.address);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -73,7 +77,7 @@ export function AccountButton() {
         className="flex h-9 items-center gap-2 rounded-lg border border-line-strong bg-elevated pr-2 pl-1.5 font-mono text-xs text-fg transition hover:border-cyan/50"
       >
         <Avatar seed={registration.userId} />
-        <span className="hidden max-w-[7.5rem] truncate sm:inline">{registration.phone.masked}</span>
+        <span className="hidden max-w-[7.5rem] truncate sm:inline">{isWallet ? shortAddress(registration.wallet.address) : "Demo account"}</span>
         <ChevronDown aria-hidden className={cn("size-3.5 text-muted transition", open && "rotate-180")} />
       </button>
 
@@ -86,9 +90,9 @@ export function AccountButton() {
           <div className="space-y-2 px-2 py-2">
             <div className="flex flex-wrap items-center gap-2">
               <p className="section-label">Signed in</p>
-              {registration.isDemoData && <Badge tone="warn">Demo OTP</Badge>}
+              {registration.isDemoData && <Badge tone="warn">Demo account</Badge>}
             </div>
-            <p className="font-mono text-xs text-fg">{registration.phone.masked}</p>
+            <p className="font-mono text-xs break-all text-fg">{isWallet ? shortAddress(registration.wallet.address) : "No wallet connected"}</p>
             <p className="text-[11px] text-muted">
               User <span className="font-mono text-fg">{registration.userId}</span>
             </p>
@@ -107,11 +111,16 @@ export function AccountButton() {
 
           <div className="my-1 h-px bg-line" />
           <div className="px-2 py-2">
-            <p className="section-label">On-chain wallet · optional</p>
-            {w.isConnected && !w.isDemo ? (
-              <p className="mt-1 font-mono text-xs break-all text-fg">{shortAddress(w.address)}</p>
+            <p className="section-label">Wallet</p>
+            {walletLive ? (
+              <p className="mt-1 text-[11px] leading-relaxed text-muted">
+                Connected on <span className="text-fg">{w.networkName}</span>
+                {!w.onExpectedChain && " · MissionEV records trips on Portal V3"}
+              </p>
+            ) : isWallet ? (
+              <p className="mt-1 text-[11px] leading-relaxed text-muted">Not connected in this tab. Reconnect to read your balance or record trips.</p>
             ) : (
-              <p className="mt-1 text-[11px] leading-relaxed text-muted">Only needed to read a real $MEV balance or redeem on-chain. Everything else works without it.</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted">You are exploring with a demo account. Connect MetaMask to sign in with your wallet instead.</p>
             )}
           </div>
           {w.error && (
@@ -119,19 +128,21 @@ export function AccountButton() {
               <WalletError />
             </div>
           )}
-          {w.isConnected && !w.isDemo ? (
+          {walletLive ? (
             <>
+              {!w.onExpectedChain && (
+                <MenuItem icon={<Wallet className="size-4" />} onClick={() => void w.switchNetwork()}>
+                  Switch to {PORTAL_V3.shortName}
+                </MenuItem>
+              )}
               <MenuItem icon={copied ? <Check className="size-4 text-ok" /> : <Copy className="size-4" />} onClick={copy}>
                 {copied ? "Address copied" : "Copy address"}
-              </MenuItem>
-              <MenuItem icon={<Unplug className="size-4" />} onClick={() => void w.disconnect()}>
-                Disconnect wallet
               </MenuItem>
             </>
           ) : (
             <div className="px-2 pb-1">
-              <Button size="sm" loading={w.connecting} icon={<Wallet aria-hidden className="size-3.5" />} onClick={w.connect} className="w-full">
-                Connect wallet
+              <Button size="sm" loading={w.connecting} icon={<Wallet aria-hidden className="size-3.5" />} onClick={() => void w.connect()} className="w-full">
+                {isWallet ? "Reconnect wallet" : "Connect MetaMask"}
               </Button>
             </div>
           )}

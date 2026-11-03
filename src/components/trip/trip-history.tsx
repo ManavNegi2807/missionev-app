@@ -13,7 +13,7 @@ export function TripHistory() {
     <Panel aria-labelledby="history-title">
       <PanelHeader
         id="history-title"
-        eyebrow="D2 · this browser tab"
+        eyebrow="This browser tab"
         title="Trip history"
         subtitle="Shared with the Rewards and Analytics screens. Stored in session storage with coordinates rounded to ~110 m."
         action={

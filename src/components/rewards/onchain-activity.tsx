@@ -41,7 +41,7 @@ export function OnchainActivity() {
     <Panel aria-labelledby="chain-title">
       <PanelHeader
         id="chain-title"
-        eyebrow="Process 6.0 ← D3 Smart-contract Ledger"
+        eyebrow="Smart-contract ledger"
         title="Portal Layer 0 / token activity"
         subtitle="Real contract events appear only when a deployed contract and a real wallet on Portal V3 are configured."
         action={

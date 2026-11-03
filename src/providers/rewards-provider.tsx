@@ -12,7 +12,7 @@ import { useOnboarding } from "./onboarding-provider";
 import { useTrip } from "./trip-provider";
 import { useWallet } from "./wallet-provider";
 
-/* D4 — Redemptions (always simulated: the contract has no redeem), and the demo top-up ledger. Both live in this tab's session storage. */
+/* Redemptions (always simulated: the contract has no redeem), and the demo top-up ledger. Both live in this tab's session storage. */
 const redemptionStore = createSessionStore<RedemptionRecord[]>("missionev:d4:redemptions", []);
 const grantStore = createSessionStore<DemoGrant[]>("missionev:d3demo:grants", []);
 

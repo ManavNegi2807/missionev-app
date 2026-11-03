@@ -35,24 +35,24 @@ export function DataSources({ ds, refreshedAt }: { ds: AnalyticsDataset; refresh
   let d3: Src;
   if (onchainActive) {
     d3 = {
-      id: "D3",
-      name: "Smart-contract Ledger · Portal Layer 0",
+      id: "ledger",
+      name: "Smart-contract ledger · Portal V3",
       state: "connected",
       lines: [`${formatNumber(c.chainEvents)} real contract event${c.chainEvents === 1 ? "" : "s"} for the connected wallet`, "Community-wide events need an indexer — not configured, so the community stays demo."],
       update: onchain ? `Read ${labelDateTime(onchain.at)}` : "Read just now",
     };
   } else if (checks.addressConfigured) {
     d3 = {
-      id: "D3",
-      name: "Smart-contract Ledger · Portal Layer 0",
+      id: "ledger",
+      name: "Smart-contract ledger · Portal V3",
       state: "unavailable",
       lines: [chainError ? `Read error: ${chainError}` : !checks.realWallet ? "Contract configured, but no real browser wallet is connected." : !checks.onPortal ? "Wallet is not on Portal V3." : checks.codeFound === false ? "No contract code at the configured address." : "Waiting for a readable balance."],
       update: "No contract read yet",
     };
   } else {
     d3 = {
-      id: "D3",
-      name: "Smart-contract Ledger · Portal Layer 0",
+      id: "ledger",
+      name: "Smart-contract ledger · Portal V3",
       state: "demo",
       lines: ["No contract address configured (NEXT_PUBLIC_MEV_CONTRACT_ADDRESS). Reward figures are derived from the demo model."],
       update: demoGenerated,
@@ -61,22 +61,22 @@ export function DataSources({ ds, refreshedAt }: { ds: AnalyticsDataset; refresh
 
   const sources: Src[] = [
     {
-      id: "D1",
-      name: "Users & Vehicles",
+      id: "profiles",
+      name: "Commuter profiles",
       state: reg ? "session" : "demo",
-      lines: [`${formatNumber(c.demoCommuters)} synthetic commuter profiles`, reg ? "1 registration from this browser (masked vehicle only)" : "No registration in this browser"],
-      update: reg ? `Registered ${labelDateTime(reg)}` : demoGenerated,
+      lines: [`${formatNumber(c.demoCommuters)} synthetic commuter profiles`, reg ? "1 account signed in on this browser" : "No account signed in on this browser"],
+      update: reg ? `Signed in ${labelDateTime(reg)}` : demoGenerated,
     },
     {
-      id: "D2",
-      name: "Trips & Telemetry",
+      id: "trips",
+      name: "Trips",
       state: c.sessionTrips ? "session" : "demo",
       lines: [`${formatNumber(c.demoJourneys)} synthetic journeys`, `${formatNumber(c.sessionTrips)} trip${c.sessionTrips === 1 ? "" : "s"} recorded in this browser`],
       update: ds.latest.trip ? `Latest trip ${labelDateTime(ds.latest.trip)}` : demoGenerated,
     },
     d3,
     {
-      id: "D4",
+      id: "redemptions",
       name: "Redemptions",
       state: c.sessionRedemptions ? "session" : "demo",
       lines: ["Synthetic community redemptions (demo catalog)", `${formatNumber(c.sessionRedemptions)} local record${c.sessionRedemptions === 1 ? "" : "s"} from this browser`],
@@ -91,18 +91,17 @@ export function DataSources({ ds, refreshedAt }: { ds: AnalyticsDataset; refresh
 
   return (
     <Panel aria-labelledby="sources-title" data-section="sources">
-      <PanelHeader id="sources-title" eyebrow="Data flow · Level 1 · process 7.0" title="Data sources and freshness" subtitle="Where every figure on this page comes from, and what is actually connected." />
+      <PanelHeader id="sources-title" eyebrow="Data sources" title="Data sources and freshness" subtitle="Where every figure on this page comes from, and what is actually connected." />
       <div className="space-y-5 p-4 sm:p-6">
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {sources.map((s) => (
             <li key={s.id} data-source={s.id} data-state={s.state} className="flex min-w-0 flex-col gap-2 rounded-xl border border-line bg-bg-2/60 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-xs text-lime">{s.id}</span>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <p className="min-w-0 text-sm font-medium text-fg">{s.name}</p>
                 <Badge tone={STATE[s.state].tone} dot>
                   {s.stateLabel ?? STATE[s.state].text}
                 </Badge>
               </div>
-              <p className="text-sm font-medium text-fg">{s.name}</p>
               <ul className="space-y-1 text-xs leading-snug text-muted">
                 {s.lines.map((l) => (
                   <li key={l} className="[overflow-wrap:anywhere]">
@@ -117,7 +116,7 @@ export function DataSources({ ds, refreshedAt }: { ds: AnalyticsDataset; refresh
 
         <ol className="grid grid-cols-1 gap-2 md:grid-cols-3" aria-label="Analytics data flow">
           {[
-            { n: "7.0 Dashboards & Analytics", sub: "Derived selectors over D1–D4", icon: <Server className="size-4" />, live: true },
+            { n: "This dashboard", sub: "Calculated from the four sources above", icon: <Server className="size-4" />, live: true },
             { n: "ESG data", sub: "Aggregate CSV / HTML demo report", icon: <FileSpreadsheet className="size-4" />, live: true },
             { n: "Companies & city planners", sub: "Not connected — no external delivery", icon: <Building2 className="size-4" />, live: false },
           ].map((nd, i, arr) => (

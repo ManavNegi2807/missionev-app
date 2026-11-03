@@ -12,7 +12,7 @@ export interface RewardSummary {
   mode: "demo" | "onchain";
   balance: number;
   earned: number;
-  /** Simulated redemptions (D4). The contract has no redeem, so these never move tokens. */
+  /** Simulated redemptions. The contract has no redeem, so these never move tokens. */
   redeemed: number;
   /** On-chain mode only: tokens sent to other addresses with `transfer`. */
   transferredOut: number;

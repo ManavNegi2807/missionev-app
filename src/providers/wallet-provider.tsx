@@ -11,6 +11,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { isAddress } from "@/lib/account";
 import { PORTAL_V3, canAddPortalChain, chainName, toHexChainId } from "@/lib/chain";
 
 /* ---------- minimal EIP-1193 typings ---------- */
@@ -63,7 +64,8 @@ export interface WalletContextValue {
   canAddChain: boolean;
   /** Raw EIP-1193 request through the connected browser wallet. Rejects when no real wallet is connected. */
   request(method: string, params?: unknown[]): Promise<unknown>;
-  connect(): Promise<void>;
+  /** Opens the wallet's connect prompt. Resolves with the connected account, or null when nothing was connected (see `error`). */
+  connect(): Promise<{ address: string; chainId: number | null } | null>;
   disconnect(): Promise<void>;
   switchNetwork(): Promise<void>;
   enterDemo(): void;
@@ -144,7 +146,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     void (async () => {
       const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
-      if (cancelled || !accounts?.length) return;
+      if (cancelled || !isAddress(accounts?.[0])) return;
       const chain = parseChainId(await provider.request({ method: "eth_chainId" }));
       if (cancelled) return;
       providerRef.current = provider;
@@ -191,21 +193,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
   }, [mode, reset]);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (): Promise<{ address: string; chainId: number | null } | null> => {
     setError(null);
     const provider = pickProvider();
     if (!provider) {
       setError({
         code: "no-wallet",
-        message: "No browser wallet detected. Install MetaMask, then reload this page — or continue in demo mode.",
+        message: "No browser wallet detected. Install MetaMask, then reload this page.",
       });
-      return;
+      return null;
     }
     setConnecting(true);
     try {
       // Only ever invoked from a user click.
       const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
-      if (!accounts?.length) throw Object.assign(new Error("No accounts returned"), { code: -1 });
+      if (!isAddress(accounts?.[0])) throw Object.assign(new Error("No valid account returned"), { code: -1 });
       const chain = parseChainId(await provider.request({ method: "eth_chainId" }));
       providerRef.current = provider;
       setAddress(accounts[0]);
@@ -213,6 +215,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setConnectedAt(Date.now());
       setMode("browser");
       setConnectedFlag(true);
+      return { address: accounts[0], chainId: chain };
     } catch (e) {
       const code = rpcCode(e);
       if (code === 4001) {
@@ -222,6 +225,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else {
         setError({ code: "failed", message: "Couldn't connect to the wallet. Unlock it and try again." });
       }
+      return null;
     } finally {
       setConnecting(false);
     }

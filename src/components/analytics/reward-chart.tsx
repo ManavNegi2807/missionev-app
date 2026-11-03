@@ -10,7 +10,7 @@ import { C, ChartTip, EmptyState, LegendToggles, SourceBadge, TipRow, useReduced
 const SERIES: LegendItem[] = [
   { key: "earned", label: "$MEV earned", color: C.lime, hint: "Recorded rewards (on-chain mints, or demo credits)" },
   { key: "pending", label: "Pending reward events", color: C.warn, hint: "Verified journeys whose record has not been written yet" },
-  { key: "redeemed", label: "$MEV redeemed", color: C.cyan, hint: "Completed or simulated redemptions (D4)" },
+  { key: "redeemed", label: "$MEV redeemed", color: C.cyan, hint: "Completed or simulated redemptions" },
 ];
 
 function Tip({ active, payload }: { active?: boolean; payload?: ReadonlyArray<{ payload?: RewardPoint }> }) {

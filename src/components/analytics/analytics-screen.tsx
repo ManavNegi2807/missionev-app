@@ -280,7 +280,7 @@ export function AnalyticsScreen() {
 
       {ready && onchainActive && (
         <Alert tone="cyan" icon={<Info aria-hidden className="size-4" />} title="On-chain events are included for your wallet only">
-          Reward figures for “You” come from real contract events. Emissions metrics still derive from the trips recorded in this browser (D2), and the rest of the community stays demo data because no event indexer is configured.
+          Reward figures for “You” come from real contract events. Emissions metrics still derive from the trips recorded in this browser, and the rest of the community stays demo data because no event indexer is configured.
         </Alert>
       )}
 
@@ -289,7 +289,7 @@ export function AnalyticsScreen() {
           <div role="status" className="mx-auto flex max-w-md flex-col items-center gap-3 text-center">
             <Route aria-hidden className="size-9 text-muted" />
             <p className="text-lg font-medium text-fg">No trips from this browser yet</p>
-            <p className="text-sm leading-relaxed text-muted">“My trips” shows only journeys recorded in this tab (D2). Capture and verify a trip on Screen 02, or switch to the community view to explore the demo dataset.</p>
+            <p className="text-sm leading-relaxed text-muted">“My trips” shows only journeys recorded in this tab. Capture and verify a trip on Screen 02, or switch to the community view to explore the demo dataset.</p>
             <div className="flex flex-wrap justify-center gap-2 pt-1">
               <Link href="/capture-trip" className="inline-flex h-10 items-center rounded-lg bg-lime px-4 font-mono text-xs tracking-[0.1em] text-bg uppercase hover:shadow-glow-lime">
                 Capture a trip

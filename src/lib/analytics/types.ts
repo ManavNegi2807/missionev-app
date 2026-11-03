@@ -2,7 +2,7 @@ import type { ModeId } from "./modes";
 
 /**
  * Shared analytics fact model. Every number on Screen 04 is derived from these two record types,
- * which are themselves built from D1/D2 (trips), D3 (ledger / demo) and D4 (redemptions).
+ * which are themselves built from trips, the ledger (or the demo model) and redemptions.
  *
  * Definitions (single source of truth — see lib/analytics/definitions.ts):
  *  - Verified journey: trip with status VERIFIED and an emission result. All impact aggregates count verified journeys only.

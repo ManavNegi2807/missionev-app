@@ -62,7 +62,7 @@ export function Topbar({
       </nav>
 
       {isDemo && (
-        <Badge tone="warn" className="max-lg:hidden">
+        <Badge tone="warn" className="max-xl:hidden">
           Demo mode
         </Badge>
       )}

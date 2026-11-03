@@ -73,7 +73,7 @@ export function RedeemModal({
   const busy = phase === "processing";
 
   return (
-    <Modal title="Confirm redemption" eyebrow="Process 6.0 → D4" labelId={labelId} onClose={onClose} dismissable={!busy}>
+    <Modal title="Confirm redemption" eyebrow="Redeem" labelId={labelId} onClose={onClose} dismissable={!busy}>
       {phase === "review" || phase === "processing" || phase === "error" ? (
         <div className="space-y-5">
           <div className="flex items-center gap-3 rounded-xl border border-line bg-bg-2/60 p-3.5">
@@ -112,7 +112,7 @@ export function RedeemModal({
 
           <Alert tone="warn" icon={<FlaskConical aria-hidden className="size-4" />} title="Demo redemption">
             Simulated. The MissionEV contract has no redeem or burn function, so no tokens move and no transaction is created, and the voucher isn&apos;t redeemable anywhere.
-            {live && " Your on-chain balance is unchanged; the amount is only subtracted from what this screen offers you."} A local D4 record is saved in this tab.
+            {live && " Your on-chain balance is unchanged; the amount is only subtracted from what this screen offers you."} A local record is saved in this tab.
           </Alert>
 
           {insufficient && !unavailable && (
@@ -190,7 +190,7 @@ function Done({ rec, onClose, onView }: { rec: RedemptionRecord; onClose: () => 
           <p className="mt-1 text-lg font-semibold text-fg">{sim ? "Demo redemption complete" : ok ? "Redemption confirmed" : failed ? "Redemption failed" : "Transaction pending"}</p>
           <p className="mt-1 text-sm text-muted">
             {sim
-              ? "No tokens were transferred and no blockchain transaction exists. This is a local D4 record."
+              ? "No tokens were transferred and no blockchain transaction exists. This is a local record."
               : ok
                 ? `${formatNumber(rec.amount)} $MEV was burned by the contract.`
                 : failed
@@ -237,7 +237,7 @@ function Done({ rec, onClose, onView }: { rec: RedemptionRecord; onClose: () => 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button onClick={onClose}>Close</Button>
         <Button variant="primary" data-autofocus onClick={onView}>
-          View D4 record
+          View record
         </Button>
       </div>
     </div>

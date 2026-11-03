@@ -12,7 +12,7 @@ const recorded = (t: TripRecord) => t.settlement.phase === "demo-credited" || t.
 /** $MEV this trip is worth: the demo credit, the exact on-chain mint, or the contract-formula preview while it is pending. */
 const tripTokens = (t: TripRecord) => (t.settlement.demo?.creditedMev ?? (t.settlement.onchain ? mevNumber(t.settlement.onchain.mintedWei) : (t.settlement.preview?.rewardMev ?? 0)));
 
-/** D2 → analytics. Same fields Screen 02 / 03 read, so totals reconcile exactly. */
+/** Trips → analytics. Same fields Screen 02 / 03 read, so totals reconcile exactly. */
 export function journeyFromTrip(t: TripRecord): Journey {
   const verified = t.status === "VERIFIED" && !!t.carbon;
   const e = verified ? t.carbon! : null;

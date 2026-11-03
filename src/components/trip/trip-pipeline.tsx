@@ -4,7 +4,7 @@ import { StageTracker, type StageState } from "@/components/ui/stage-tracker";
 import { useOnboarding } from "@/providers/onboarding-provider";
 import { useTrip } from "@/providers/trip-provider";
 
-const STAGES = ["Registered", "Captured", "Verified", "Calculated", "Recorded"] as const;
+const STAGES = ["Signed in", "Captured", "Verified", "Calculated", "Recorded"] as const;
 
 export function TripPipeline() {
   const { status, record } = useTrip();
