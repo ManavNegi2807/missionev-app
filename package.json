@@ -1,6 +1,8 @@
 {
   "name": "missionev",
   "version": "0.1.0",
+  "description": "A Strava for carbon: journey-based emissions accounting with $MEV rewards on Portal V3, signed by an oracle and submitted by the commuter's wallet.",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev",
