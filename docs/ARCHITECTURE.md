@@ -6,30 +6,29 @@ the **MissionEV contract** on Portal V3. The browser never holds a signing key f
 ```mermaid
 flowchart LR
   subgraph Browser["Browser: Next.js 16 / React 19"]
-    UI["4 screens<br/>Register, Capture trip, Rewards, Analytics"]
+    direction TB
+    UI["4 screens<br/>Register, Capture trip,<br/>Rewards, Analytics"]
     ENG["Carbon engine<br/>src/lib/carbon"]
     WAL["Wallet provider<br/>EIP-1193, MetaMask"]
+    UI --> ENG
+    UI --> WAL
   end
-  subgraph Server["Server: Next route handlers (src/app/api, src/server)"]
-    ORA["/api/oracle/sign-trip<br/>re-verify, recalculate, sign EIP-712"]
-    CALC["/api/trips/calculate and /verify"]
-    READ["/api/commuter, /rewards, /trips, /status"]
-    OTP["/api/auth/otp/*<br/>demo one-time password"]
-    OCR["/api/vision/ocr<br/>Azure AI Vision, optional"]
+  subgraph Server["Server: Next route handlers"]
+    direction TB
+    ORA["Oracle<br/>/api/oracle/sign-trip<br/>re-verify, recalculate,<br/>sign EIP-712"]
+    API["Other routes<br/>trips calculate and verify,<br/>commuter, rewards, status,<br/>OTP demo, OCR optional"]
   end
   subgraph Chain["Portal V3 testnet, chain 420420777"]
-    RPC["EVM RPC"]
     SC["MissionEVv2 contract<br/>$MEV, streaks, carbon score"]
   end
-  UI --> ENG
-  UI --> WAL
-  UI -->|"trip evidence + wallet proof"| ORA
-  UI --> CALC
-  ORA -->|"reads: nonce, processedTrips, signer"| RPC
-  READ -->|"reads"| RPC
-  WAL -->|"recordCommute transaction from the commuter"| SC
-  RPC --- SC
+  UI -->|"trip evidence<br/>+ wallet proof"| ORA
+  UI -->|"calculate, status,<br/>reads"| API
+  ORA -->|"reads: nonce,<br/>processedTrips, signer"| SC
+  API -->|"reads via RPC"| SC
+  WAL ==>|"recordCommute transaction<br/>sent by the commuter"| SC
 ```
+
+The thick arrow is the point of the design: the server only signs and reads. The commuter's own wallet sends the transaction.
 
 ## Journey to $MEV
 
@@ -52,7 +51,7 @@ sequenceDiagram
   O-->>B: EIP-712 signature over exactly what the oracle derived
   B->>W: send recordCommute(tripId, mode, distance, co2, deadline, sig)
   W->>M: transaction from the commuter
-  M->>M: ecrecover equals azureOracleSigner, replay and deadline checks, streak, reward
+  M->>M: verify signature, update streak, mint
   M-->>W: mint $MEV to msg.sender, emit CommuteVerified
   B->>R: read receipt, Transfer log, balanceOf, getCommuter
 ```
