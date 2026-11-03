@@ -19,7 +19,10 @@ Before recording: `npm run dev`, a browser window at 1280 px wide, a wallet on P
 Honest notes to say or show: sign-in is a demo OTP; the community analytics are synthetic; redemptions are simulated because the contract has
 no `redeem`; $MEV is a prototype token, not a certified carbon credit.
 
-## Pitch deck outline (8 slides)
+## Pitch deck
+
+The finished 9-slide deck is [`pitch/MissionEV-pitch-deck.pdf`](pitch/MissionEV-pitch-deck.pdf). Its source is [`pitch/deck.html`](pitch/deck.html):
+open it in a browser and print to PDF (landscape, no margins, background graphics on) to regenerate it after an edit. The outline it follows:
 
 1. **Title.** MissionEV, a Strava for carbon. One-line promise: reward the impact of the journey, not the vehicle.
 2. **Problem.** Transport emissions are measured by fuel sold or vehicles owned, not by the trips people actually make. Incentives go to

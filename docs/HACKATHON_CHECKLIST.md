@@ -21,7 +21,7 @@ final stretch is: **nothing structural after 5 Nov 04:00 UTC**; use the remainin
 | Verifiable on-chain interactions | **Partly** | The deployment is verifiable, and the verifier node's signature was accepted by the deployed contract in a simulation (nothing sent). A real `recordCommute` transaction has **not** been sent: it needs about 35 tPOT in one wallet, more than either remaining wallet holds. This is the biggest gap against "technical feasibility" |
 | Runnable demo: web link **or clear local instructions in the README** | Done | Local instructions: README "Try it in 60 seconds". A hosted link is optional |
 | Demo video, at most 3 minutes, showing a real product, the core functions and Portaldot integration, publicly accessible | **Missing** | Script and shot list in [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md); upload and paste the link |
-| Pitch deck (PDF or public link): problem, why Portaldot is essential, proof it works, why continued support | **Missing** | Outline in [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) |
+| Pitch deck (PDF or public link): problem, why Portaldot is essential, proof it works, why continued support | **Built, review it** | [`pitch/MissionEV-pitch-deck.pdf`](pitch/MissionEV-pitch-deck.pdf) (9 slides; source [`pitch/deck.html`](pitch/deck.html)). Check every claim, add your teammates, and update the "Next" tile once a real transaction exists |
 | Contract address and transaction hash | Done | As above |
 
 ## Code-compliance rules
