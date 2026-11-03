@@ -180,6 +180,7 @@ Solidity 0.8 compiled with solc-js 0.8.34, vitest with `@ethereumjs/vm`. Full li
 | `contracts/` | `MissionEV.sol` (as supplied), `proposed/MissionEVv2.sol` (deployed), compiled artifacts, deployment record |
 | `scripts/` | `compile-contract`, `deploy-contract`, `verify-deployment`, `network-health`, `dev-chain` |
 | `tests/` | 100+ vitest tests: carbon, contract, oracle, transport, routes, receipt OCR, network health |
+| `e2e/` | Browser tests with playwright-core: landing page, wallet sign-in, demo flow (`npm run e2e`) |
 | `docs/` | Architecture, flow, frontend, backend, contract, deployment, audit, integration report, demo script, checklist |
 
 ## Environment variables
@@ -195,12 +196,15 @@ visitor: restrict it by domain). Receipt OCR needs no setting. Use a **fresh** o
 ```bash
 npm test           # the full suite
 npm run lint && npm run typecheck && npm run build
+npm run dev        # then, in another terminal:
+npm run e2e        # the browser tests (Chrome or Edge, nothing downloaded): landing page, wallet sign-in, demo flow
 ```
 
 The contract tests compile the contract and execute it in an in-process EVM (`@ethereumjs/vm`), so every audit finding is demonstrated by
 running code, and the app's EIP-712 typed data and reward preview are checked against the contract's own `DOMAIN_SEPARATOR` and arithmetic.
 The full flow (sign-in, ten modes, EV, petrol and cab trips, rewards, analytics) was also driven in a real browser in DEMO mode, and the
-LIVE flow against a local chain, with a mock wallet.
+LIVE flow against a local chain, with a mock wallet. The landing page, wallet sign-in and demo-flow browser tests are in [`e2e/`](e2e/README.md)
+so anyone can re-run them (126 checks); the local-chain LIVE, receipt-scan and screen-size scripts have not been moved into the repo yet.
 
 <details>
 <summary><strong>Carbon accounting (<code>src/lib/carbon</code>)</strong></summary>

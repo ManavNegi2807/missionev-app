@@ -27,7 +27,7 @@ CI runs the same four commands on every push and pull request.
 
 ## Ground rules
 
-* **Never commit a secret.** No `.env.local`, keys, mnemonics or real phone numbers. Keep secrets out of any `NEXT_PUBLIC_` variable.
+* **Never commit a secret.** No `.env.local`, keys, mnemonics or personal data. Keep secrets out of any `NEXT_PUBLIC_` variable.
 * **Label what is simulated.** A DEMO result must never be shown as an on-chain transaction. $MEV is not a certified carbon credit.
 * **Carbon numbers need a source.** New factors go in `src/lib/carbon/emissionFactors.ts` with value, unit, year, source and a status
   (`primary`, `secondary` or `assumption`).

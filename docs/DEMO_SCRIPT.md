@@ -8,7 +8,7 @@ Before recording: `npm run dev`, a browser window at 1280 px wide, a wallet on P
 
 | Time | Show | Say |
 |---|---|---|
-| 0:00-0:20 | The register screen | "Cities have no way to reward the *journey* someone chose. Existing schemes reward owning an EV. MissionEV rewards the impact of each trip: an EV owner in a petrol cab earns nothing, a metro commuter with no vehicle can earn." |
+| 0:00-0:20 | The landing page (move the mouse over the hero so the network and card react), then press Launch the app | "Cities have no way to reward the *journey* someone chose. Existing schemes reward owning an EV. MissionEV rewards the impact of each trip: an EV owner in a petrol cab earns nothing, a metro commuter with no vehicle can earn." |
 | 0:20-0:45 | Press Connect MetaMask (the wallet address is the account), then the transport profile | "No phone number, no password: my wallet is my account. How do you usually commute? Ten modes. Vehicles are only a profile: efficiency comes from battery and range, or km per litre, and unknown mileage is labelled low confidence, never invented." |
 | 0:45-1:25 | Capture trip: pick Metro, Simulated, start, verify | "Each trip asks how I travelled. This one is a labelled simulation. The verification engine runs four checks, then the carbon engine compares my journey with a reference journey on the same boundary." Open "How did MissionEV calculate this?": formula, CEA grid factor, year, confidence |
 | 1:25-1:50 | The reward preview and the DEMO credit button | "The preview is an exact replica of the contract's arithmetic. In demo mode the credit stays in this tab: it says nothing was minted." |

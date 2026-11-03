@@ -29,7 +29,7 @@ commuter to confirm the vehicle that carried them. The journey is calculated fro
 | `trip-provider` | The trip state machine (idle, recording, paused, completed, verifying, verified or failed), DEMO versus LIVE, and the settlement flow (credit demo, request signature, submit on-chain) |
 | `rewards-provider` | Demo and on-chain balances, demo credits and simulated redemptions |
 
-Trips, registration and redemptions live in `sessionStorage` for the browser tab (coordinates rounded to about 110 m), shared across the
+The signed-in account, trips and redemptions live in `sessionStorage` for the browser tab (coordinates rounded to about 110 m), shared across the
 screens. Nothing is sent to a database.
 
 ## Components

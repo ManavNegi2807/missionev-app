@@ -1,6 +1,6 @@
 # Submission checklist: Portaldot Hacker House 2026
 
-Status as of 4 November 2026, checked against the organisers' published rules. Track: **Ecosystem DApps**.
+Status as of 4 November 2026 (after the MetaMask sign-in and the landing page were added), checked against the organisers' published rules. Track: **Ecosystem DApps**.
 
 **Key dates (UTC):** final submission and code freeze **6 Nov 04:00** (09:30 IST); live demo day 8 to 9 Nov; community voting 9 Nov 16:00 to
 10 Nov 16:00; winners 11 Nov. Core modules must not all be committed in the last 24 hours before the freeze, so the rule of thumb for the
@@ -16,7 +16,7 @@ final stretch is: **nothing structural after 5 Nov 04:00 UTC**; use the remainin
 | Complete README | Done | [`README.md`](../README.md) |
 | Deployment instructions | Done | [`DEPLOYMENT.md`](DEPLOYMENT.md) |
 | Project documentation | Done | [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FRONTEND.md`](FRONTEND.md), [`BACKEND.md`](BACKEND.md), [`SMART_CONTRACT.md`](SMART_CONTRACT.md), [`FLOW.md`](FLOW.md), [`BUSINESS.md`](BUSINESS.md), [`CONTRACT_AUDIT.md`](CONTRACT_AUDIT.md), [`INTEGRATION_REPORT.md`](INTEGRATION_REPORT.md) |
-| Reproducible, runnable final code | Done | `npm ci && npm run dev`; CI runs lint, type-check, tests and the build on every push |
+| Reproducible, runnable final code | Done | `npm ci && npm run dev`; CI runs lint, type-check, tests and the build on every push. Browser tests anyone can re-run: `npm run e2e` (see [`e2e/README.md`](../e2e/README.md)) |
 | Testnet deployment information | Done | Contract `0x0904244017324dc1bf7c611fe1236936ee65fc82`, tx `0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d9ca965`, [explorer](https://node-console.portaldot.dev/), `npm run contract:verify` |
 | Verifiable on-chain interactions | **Partly** | The deployment is verifiable, and the verifier node's signature was accepted by the deployed contract in a simulation (nothing sent). A real `recordCommute` transaction has **not** been sent: it needs about 35 tPOT in one wallet, more than either remaining wallet holds. This is the biggest gap against "technical feasibility" |
 | Runnable demo: web link **or clear local instructions in the README** | Done | Hosted: **https://missionev.vercel.app** (public, DEMO mode, auto-deployed from `master`; the full browser flow passes against it). Local: README "Try it in 60 seconds" |

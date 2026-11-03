@@ -3,6 +3,30 @@
   "version": "0.1.0",
   "description": "A Strava for carbon: journey-based emissions accounting with $MEV rewards on Portal V3, signed by an oracle and submitted by the commuter's wallet.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ManavNegi2807/missionev-app.git"
+  },
+  "homepage": "https://missionev.vercel.app",
+  "bugs": {
+    "url": "https://github.com/ManavNegi2807/missionev-app/issues"
+  },
+  "keywords": [
+    "portaldot",
+    "portal-v3",
+    "web3",
+    "dapp",
+    "carbon",
+    "climate",
+    "mobility",
+    "eip-712",
+    "oracle",
+    "nextjs",
+    "metamask"
+  ],
+  "engines": {
+    "node": ">=20.9"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -15,7 +39,11 @@
     "dev:chain": "node scripts/dev-chain.mjs",
     "contract:deploy": "node scripts/deploy-contract.mjs",
     "contract:verify": "node scripts/verify-deployment.mjs",
-    "network:health": "node scripts/network-health.mjs"
+    "network:health": "node scripts/network-health.mjs",
+    "e2e": "npm run e2e:landing && npm run e2e:wallet && npm run e2e:demo",
+    "e2e:landing": "node e2e/landing.mjs",
+    "e2e:wallet": "node e2e/wallet-login.mjs",
+    "e2e:demo": "node e2e/demo-flow.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -42,6 +70,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
+    "playwright-core": "^1.64.1",
     "solc": "0.8.34",
     "tailwindcss": "^4",
     "typescript": "^5",

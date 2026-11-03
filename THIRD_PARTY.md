@@ -24,6 +24,7 @@ Licences were read from the installed packages (`node_modules/<name>/package.jso
 | eslint, eslint-config-next | 9.39.5, 16.4.3 | MIT | Linting |
 | tailwindcss, @tailwindcss/turbopack | 4.3.3 | MIT | Styling |
 | vitest | 4.1.12 | MIT | Test runner |
+| playwright-core | 1.64.1 | Apache-2.0 | Drives an already-installed Chrome or Edge for the browser tests in `e2e/` (no browser is downloaded) |
 | solc | 0.8.34 | MIT | Compiling the contract (`npm run contract:compile`) |
 | @ethereumjs/vm, evm, util, block | 10.1.3 | MPL-2.0 | In-process EVM that runs the compiled contract in tests and in `npm run dev:chain` |
 | @ethereumjs/common | 10.1.3 | MIT | Chain configuration for the in-process EVM |

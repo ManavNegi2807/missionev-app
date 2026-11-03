@@ -44,3 +44,6 @@ next-env.d.ts
 !.env.example
 
 .vercel
+
+# browser-test screenshots (npm run e2e)
+/e2e/.artifacts/
