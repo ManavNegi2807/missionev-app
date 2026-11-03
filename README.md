@@ -17,7 +17,7 @@ commuter's own wallet submits. Built for the Portaldot Hacker House 2026.
 | | |
 |---|---|
 | Smart contract | **Live on Portal V3 testnet and verified**: [`0x0904…fc82`](#deployed-on-portal-v3-testnet) |
-| Web app | Runs locally in **DEMO** mode, clearly labelled. LIVE needs a server with the oracle key (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)) |
+| Web app | **Live demo: https://missionev.vercel.app** (DEMO mode, clearly labelled, no keys on the server). Also runs locally. LIVE needs a server with the oracle key (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)) |
 | Tests | 100+ passing, including the compiled contract executed in an in-process EVM; CI runs lint, type-check, tests and build |
 | Not yet | A hosted demo link, and a first `recordCommute` transaction sent from the web app to the deployed contract |
 | Honesty | Sign-in uses a demo OTP, redemptions are simulated, community analytics are synthetic. See [real versus simulated](docs/INTEGRATION_REPORT.md) |
@@ -37,6 +37,9 @@ Pitch deck: [`docs/pitch/MissionEV-pitch-deck.pdf`](docs/pitch/MissionEV-pitch-d
 [`docs/HACKATHON_CHECKLIST.md`](docs/HACKATHON_CHECKLIST.md), including what is still missing.
 
 ## Try it in 60 seconds
+
+**No install:** open **https://missionev.vercel.app** and follow the steps below. It is the same app, hosted in DEMO mode: every simulated
+result is labelled and nothing on that site holds a key. To run it yourself:
 
 ```bash
 git clone https://github.com/ManavNegi2807/missionev-app.git

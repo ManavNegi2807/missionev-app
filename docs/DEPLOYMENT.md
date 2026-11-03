@@ -79,13 +79,23 @@ npm run dev        # http://localhost:3000
 | `ORACLE_SIGNATURE_TTL_SECONDS`, `ORACLE_MAX_TRIPS_PER_DAY` | server only, optional | tuning |
 | `NEXT_PUBLIC_GOOGLE_MAPS_KEY` | public, optional | overrides the default Leaflet and OpenStreetMap map; restrict the key by domain |
 
-`.env.example` lists every name with no values. Then open `/api/status`: it shows `LIVE` once all three server settings are present, and
+`.env.example` lists every name (the public values of this deployment are filled in; every secret is blank). Then open `/api/status`: it shows `LIVE` once all three server settings are present, and
 never prints a secret. A LIVE journey also needs real GPS and a real wallet on chain 420420777 holding a little tPOT for gas.
 
 To try the whole LIVE flow without touching a network, `npm run dev:chain` starts a local in-memory EVM with the real contract and prints
 the settings to use.
 
 ## Hosting
+
+The public demo is **https://missionev.vercel.app**. It is a Vercel project connected to this repository: every push to `master` builds and
+deploys to production. It runs in **DEMO mode** with **no environment variables**, so no key of any kind is on the host; `/api/status` on
+the live site reports `"mode":"DEMO"`. Vercel's deployment protection leaves the short production address public, while the long
+per-deployment addresses stay behind a Vercel login, so always share the short one.
+
+To turn the hosted site LIVE you would add `MISSIONEV_CONTRACT_ADDRESS`, `PORTAL_RPC_URL` and `ORACLE_PRIVATE_KEY` as **server-only**
+environment variables in the Vercel dashboard (typed there by you, never in chat or in a commit). Think about it first: a public site that
+holds a signing key lets anyone ask it to sign, so the daily limit and the wallet-proof check become the only guards, and the rate limit is
+per serverless instance.
 
 Any Node host for Next.js works (for example Vercel). Two things to know: the oracle's rate limit and duplicate memory are in process
 memory, so on a serverless host each instance has its own (the on-chain `processedTrips` flag still prevents double minting); and the
