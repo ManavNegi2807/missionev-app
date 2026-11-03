@@ -8,8 +8,6 @@ environment variables (`src/server/config.ts`); none carries a `NEXT_PUBLIC_` pr
 | Route | Method | Purpose | Limits and notes |
 |---|---|---|---|
 | `/api/status` | GET | What the server has configured, never the secrets; `mode` is `LIVE` only when contract address, RPC URL and oracle key are all set | Read at request time |
-| `/api/auth/otp/request` | POST | **Mock** one-time-password request: nothing is sent, the response says `"delivery": "demo"` | 5 requests per 10 minutes |
-| `/api/auth/otp/verify` | POST | **Mock** check of the fixed demo OTP. Not authentication: no session is issued | 10 per 10 minutes |
 | `/api/trips/calculate` | POST | The shared carbon engine as a service; signs and changes nothing | |
 | `/api/trips/verify` | POST | Runs the oracle's checks on trip evidence without signing | The wallet proof is ignored here |
 | `/api/sign-trip` | POST | **The verifier node (oracle signer).** Re-verifies, calculates the CO2 avoided itself and signs the exact EIP-712 `TripPayload` for chain 420420777 | 20 per minute per IP; body up to 2 MB |
@@ -18,6 +16,8 @@ environment variables (`src/server/config.ts`); none carries a `NEXT_PUBLIC_` pr
 | `/api/trips/:tripId` | GET | What the oracle signed for this trip id (from this server's memory) and whether the contract has processed it | Memory is empty after a restart; the on-chain `processedTrips` flag is the durable truth |
 
 There is no OCR route: receipt images are read in the browser by Tesseract.js and never reach the server (see [`FRONTEND.md`](FRONTEND.md)).
+There is no sign-in route either: the account is the wallet address MetaMask shares in the browser, and the server issues no session.
+What the server relies on is the fresh wallet signature sent with each reward request (rule 2 below).
 
 ## The verifier node: `POST /api/sign-trip`
 
@@ -56,7 +56,7 @@ wallet is connected on chain 420420777. A DEMO result is never presented as an o
 
 ## Data and privacy rules
 
-* Full mobile numbers are never stored; only a masked form is kept.
+* No phone number, name or e-mail is collected, and the server stores nothing about a commuter; the account is a public wallet address.
 * No raw GPS path is persisted: coordinates are rounded to about 110 m, and samples go to the oracle only for the request.
 * No wallet addresses or vehicle identifiers appear in analytics exports; registration numbers are kept only masked.
 * Receipt images are never stored, and never uploaded: they are read in the browser. Driver names and number plates are never read out.
@@ -65,4 +65,4 @@ wallet is connected on chain 420420777. A DEMO result is never presented as an o
 ## Limits
 
 The rate limiters and the signed-trip log are in process memory (they stand in for a future database), so they reset on
-restart and are per instance. The OTP is a mock. See [`INTEGRATION_REPORT.md`](INTEGRATION_REPORT.md) for the full real-versus-simulated table.
+restart and are per instance. See [`INTEGRATION_REPORT.md`](INTEGRATION_REPORT.md) for the full real-versus-simulated table.

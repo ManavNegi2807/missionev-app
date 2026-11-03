@@ -99,7 +99,7 @@ per serverless instance.
 
 Any Node host for Next.js works (for example Vercel). Two things to know: the oracle's rate limit and duplicate memory are in process
 memory, so on a serverless host each instance has its own (the on-chain `processedTrips` flag still prevents double minting); and the
-OTP is a mock, so a public site is a demo, not a production sign-in.
+sign-in is a wallet connection with no server session, so a public site is a demo, not a production login.
 
 ## Notes for other builders on Portal V3
 

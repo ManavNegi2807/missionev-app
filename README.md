@@ -19,8 +19,8 @@ commuter's own wallet submits. Built for the Portaldot Hacker House 2026.
 | Smart contract | **Live on Portal V3 testnet and verified**: [`0x0904…fc82`](#deployed-on-portal-v3-testnet) |
 | Web app | **Live demo: https://missionev.vercel.app** (DEMO mode, clearly labelled, no keys on the server). Also runs locally. LIVE needs a server with the oracle key (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)) |
 | Tests | 100+ passing, including the compiled contract executed in an in-process EVM; CI runs lint, type-check, tests and build |
-| Not yet | A hosted demo link, and a first `recordCommute` transaction sent from the web app to the deployed contract |
-| Honesty | Sign-in uses a demo OTP, redemptions are simulated, community analytics are synthetic. See [real versus simulated](docs/INTEGRATION_REPORT.md) |
+| Not yet | A first `recordCommute` transaction sent from the web app to the deployed contract |
+| Honesty | Sign-in is a MetaMask connection (or a labelled demo account); redemptions are simulated and community analytics are synthetic. See [real versus simulated](docs/INTEGRATION_REPORT.md) |
 
 ## For judges: the evidence, by criterion
 
@@ -48,10 +48,10 @@ npm ci
 npm run dev        # http://localhost:3000, DEMO mode, no keys needed
 ```
 
-Then: enter any 10-digit mobile number, press **Send OTP**, then **Fill it in** (the OTP is a labelled demo value) and **Verify**. Choose
-how you usually commute and save. Open **Capture trip**, pick **Metro**, choose **Simulated**, press **Start trip**, then **Verify trip**.
-You get the verification checks, the carbon comparison with its formula and sources, and an illustrative $MEV preview. The credit button
-is labelled "not on-chain".
+Then: press **Connect MetaMask**. Your wallet address is your account, and MetaMask offers to add Portal V3 if it is missing. No wallet?
+Press **Explore with a demo account**: everything is then simulated and labelled. Choose how you usually commute and save. Open
+**Capture trip**, pick **Metro**, choose **Simulated**, press **Start trip**, then **Verify trip**. You get the verification checks, the
+carbon comparison with its formula and sources, and an illustrative $MEV preview. The credit button is labelled "not on-chain".
 
 Other commands: `npm test`, `npm run build && npm run start`, `npm run contract:compile`, `npm run dev:chain` (a local in-memory chain
 with the real contract, to try the LIVE flow without a network). Needs Node 20.9 or newer.
@@ -171,7 +171,7 @@ Solidity 0.8 compiled with solc-js 0.8.34, vitest with `@ethereumjs/vm`. Full li
 | Path | Contents |
 |---|---|
 | `src/app/(app)/` | The four screens: register, capture-trip, rewards, analytics |
-| `src/app/api/` | Route handlers: oracle, trip calculate and verify, OTP (mock), OCR, status, read-only chain reads |
+| `src/app/api/` | Route handlers: oracle, trip calculate and verify, OCR, status, read-only chain reads |
 | `src/server/` | Oracle logic: config, signing service, chain reader, rate limiting |
 | `src/lib/carbon/` | Emission factors, efficiency, the journey engine, contract mapping, reward policy and preview |
 | `src/lib/oracle/`, `src/lib/contract/` | EIP-712 payload, wallet proof, ABI and chain constants |
@@ -224,7 +224,7 @@ efficiency multiplier, because the contract has none.
 <details>
 <summary><strong>Data and privacy rules</strong></summary>
 
-No full mobile numbers stored (masked only); no raw GPS paths persisted (coordinates rounded to about 110 m; samples go to the oracle only
+No phone number, name or e-mail is collected (the account is a wallet address, or a labelled demo account); no raw GPS paths persisted (coordinates rounded to about 110 m; samples go to the oracle only
 for the request and are not stored); no wallet addresses or vehicle identifiers in analytics exports; registration numbers kept only
 masked; receipt images never stored; mock data stays labelled DEMO.
 </details>
@@ -240,7 +240,9 @@ overrides); charts and the map read the variables.
 
 ## Known limitations
 
-* Sign-in is a **mock**: a fixed demo OTP, no SMS and no real authentication.
+* Sign-in is a wallet connection, not yet a signed login message: the app keeps the address MetaMask shares for the life of the browser tab
+  and issues no server session. What matters on-chain does not rely on it: the verifier node re-checks a fresh wallet signature on every
+  reward request. A demo account has no wallet and nothing it does is on-chain.
 * The oracle's daily limit and duplicate memory are in process memory (reset on restart, per instance); the on-chain `processedTrips` flag is
   the durable guard. A durable store is the next step.
 * Receipt OCR (Tesseract.js) was tried on rendered sample receipts, not real Ola, Uber or Rapido screenshots, so accuracy on real ones is
@@ -262,7 +264,7 @@ overrides); charts and the map read the variables.
   contract integration and audit, tests, deploy and verify tooling, the testnet deployment, and the documentation.
 * **Supplied or carried over:** `contracts/MissionEV.sol` was supplied as the project's contract and is kept verbatim; the reference-journey
   constants (petrol car 18 km/l, petrol two-wheeler 50 km/l) were carried over from an earlier prototype.
-* **Simulated or mocked:** the OTP, community analytics, redemptions, and any trip captured in Simulated mode. Each is labelled in the UI.
+* **Simulated or mocked:** demo accounts, community analytics, redemptions, and any trip captured in Simulated mode. Each is labelled in the UI.
 * **Third-party code, data and services:** [`THIRD_PARTY.md`](THIRD_PARTY.md).
 * **AI assistance.** Much of the work after the first front-end commit was written with Claude Code, Anthropic's coding agent, working in
   this repository under the developer's direction (commits carry a `Co-Authored-By` trailer). The contract deployment was run by the
@@ -270,7 +272,7 @@ overrides); charts and the map read the variables.
 
 ## Roadmap
 
-A durable verifier-node store (a database), real SMS authentication, sourced metro and e-bus factors and vehicle efficiency data,
+A durable verifier-node store (a database), Sign-In with Ethereum (a signed login message and a server session), sourced metro and e-bus factors and vehicle efficiency data,
 a redeemable partner catalogue, and a hosted demo. A transit operator or employer pilot is the commercial path.
 
 ## Team and licence

@@ -6,7 +6,7 @@ Next.js 16 (App Router, Cache Components), React 19, Tailwind v4, recharts. `/` 
 
 | Screen | Route | What it does |
 |---|---|---|
-| 01 Sign-in and transport profile | `/register` | Phone number and a **demo** one-time password (no SMS is sent). Then "How do you usually commute?": ten modes (EV car, electric two-wheeler, petrol car, diesel car, petrol two-wheeler, Ola/Uber/Rapido, metro, electric bus, walking or cycling, other). Vehicles are saved with battery and range (EV, converted to kWh per km) or km per litre (petrol, diesel). "Don't know your mileage?" falls back to a labelled, low-confidence category default; the app never invents a model-specific figure |
+| 01 Sign-in and transport profile | `/register` | **Connect MetaMask**: the wallet address is the account, and MetaMask offers to add Portal V3 if it is missing. No wallet? A labelled **demo account** (nothing is on-chain). Then "How do you usually commute?": ten modes (EV car, electric two-wheeler, petrol car, diesel car, petrol two-wheeler, Ola/Uber/Rapido, metro, electric bus, walking or cycling, other). Vehicles are saved with battery and range (EV, converted to kWh per km) or km per litre (petrol, diesel). "Don't know your mileage?" falls back to a labelled, low-confidence category default; the app never invents a model-specific figure |
 | 02 Capture trip | `/capture-trip` | Pick **how you travelled for this trip** (eight tiles), then record with real GPS or a labelled simulation. Shows live telemetry, a map, the verification engine (four checks, then a trust level), the carbon comparison with its formula, sources and confidence, an illustrative $MEV preview, and the settlement panel (credit in the demo, or sign and record on-chain) |
 | 03 Rewards | `/rewards` | $MEV balance (a labelled demo balance, or the real `balanceOf` when a real wallet is on Portal V3), the separate tPOT gas balance, journey and reward KPIs, a **simulated** redemption catalogue, and on-chain activity |
 | 04 ESG analytics | `/analytics` | Charts, a journey table, a leaderboard, definitions and data sources. Community data is deterministic and synthetic, and says so |
@@ -18,8 +18,8 @@ commuter to confirm the vehicle that carried them. The journey is calculated fro
 
 | Provider (`src/providers/`) | Holds |
 |---|---|
-| `onboarding-provider` | Masked phone, transport profile and saved vehicles (the "D1" record) |
-| `wallet-provider` | EIP-1193 wallet connection, chain check and add-network, silent restore of a previous connection |
+| `onboarding-provider` | The signed-in account (a wallet address or a demo account), its transport profile and saved vehicles. It follows the connected wallet: connecting upgrades a demo account, and switching accounts in MetaMask starts that address's own session |
+| `wallet-provider` | EIP-1193 wallet connection (address validated), chain check and add-network, silent restore of a previous connection |
 | `trip-provider` | The trip state machine (idle, recording, paused, completed, verifying, verified or failed), DEMO versus LIVE, and the settlement flow (credit demo, request signature, submit on-chain) |
 | `rewards-provider` | Demo and on-chain balances, demo credits and simulated redemptions |
 

@@ -10,7 +10,7 @@ flowchart LR
     UI["4 screens<br/>Register, Capture trip,<br/>Rewards, Analytics<br/>(Leaflet + OpenStreetMap map)"]
     ENG["Carbon engine<br/>src/lib/carbon"]
     OCR["Receipt OCR<br/>Tesseract.js, in the browser"]
-    WAL["Wallet provider<br/>EIP-1193, MetaMask"]
+    WAL["Wallet provider<br/>EIP-1193, MetaMask<br/>(connecting is signing in)"]
     UI --> ENG
     UI --> OCR
     UI --> WAL
@@ -18,7 +18,7 @@ flowchart LR
   subgraph Server["Server: Next route handlers"]
     direction TB
     ORA["Verifier node<br/>/api/sign-trip<br/>re-verify, calculate CO2,<br/>sign EIP-712"]
-    API["Other routes<br/>trips calculate and verify,<br/>commuter, rewards, status,<br/>OTP demo"]
+    API["Other routes<br/>trips calculate and verify,<br/>commuter, rewards, status"]
   end
   subgraph Chain["Portal V3 testnet, chain 420420777"]
     SC["MissionEVv2 contract<br/>$MEV, streaks, carbon score"]

@@ -36,7 +36,7 @@ None of these is proven. They are the order in which we would test them.
 ## Path to first users
 
 1. A pilot on one corridor or one employer campus in the Delhi NCR, where the grid factor and transit modes are already modelled.
-2. Replace the demo sign-in with real phone verification and the in-memory oracle limits with a database (the two things that block a public pilot).
+2. Move from a plain wallet connection to Sign-In with Ethereum (a signed login message and a server session), and replace the in-memory oracle limits with a database (the two things that block a public pilot).
 3. Replace the placeholder metro and e-bus factors with operator figures, and add cited efficiency data for popular vehicles.
 4. Measure: weekly active commuters, verified journeys per week, change in clean-mode share against a baseline, and cost per kg of CO2e avoided.
 

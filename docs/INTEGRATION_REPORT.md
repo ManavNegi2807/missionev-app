@@ -9,7 +9,7 @@ for receipt OCR, and the verifier node at `/api/sign-trip`.
 ```
 Client (Next.js 16, React 19)        Server (Next route handlers = the Node.js API layer)        Chain
 ────────────────────────────         ──────────────────────────────────────────────────         ─────
-sign-in → transport profile  ──►     /api/auth/otp/{request,verify}   MOCK (demo OTP)
+wallet sign-in → profile             (no server call: the address MetaMask shares is the account)
 journey mode chosen per trip        (receipt OCR runs in the browser with Tesseract.js: no upload)
 GPS capture + local checks   ──►     /api/trips/calculate, /verify    shared carbon engine / verifier checks
 wallet signs a free proof    ──►     /api/sign-trip                   re-verify → recalc → EIP-712 sign
@@ -33,14 +33,14 @@ maps, routing or OCR service is called by this code.**
 | Reference journeys | **Assumptions** | Petrol car 18 km/l, petrol two-wheeler 50 km/l (carried over from the earlier prototype). Not fleet statistics. |
 | EV charging loss | **Assumption** | 90% applied to battery-side consumption only; unsourced. Transmission & distribution losses and battery manufacturing are outside the boundary and the UI says so. |
 | Vehicle model catalogue | **Names only** | `src/data/vehicle-catalog.json` ships **no** efficiency figures. "Don't know your mileage?" therefore never finds a manufacturer figure; it falls back to the commuter's estimate or a labelled category default (low confidence). Add cited figures to the JSON to enable look-ups. |
-| Vehicle profile | **Self-declared** | No registry. Stored in `sessionStorage` (D1). |
-| Phone / OTP | **Mock** | Fixed demo OTP; server routes exist and check it, rate-limited, but this is **not authentication** and no SMS is sent. The UI says "DEMO OTP — no SMS is sent". |
+| Vehicle profile | **Self-declared** | No registry. Stored in `sessionStorage`. |
+| Sign-in | **Wallet connection, or a labelled demo account** | The account is the public address MetaMask shares through `eth_requestAccounts`; no phone number, e-mail or password exists anywhere. It is a connection, not a signed login message, and no server session is issued, so it is not proof of identity: the verifier node instead re-checks a fresh wallet signature on every reward request. A demo account has no wallet and nothing it does is on-chain. Browser-tested with a scriptable mock wallet (reject, wrong network, add network, account switch, lock, reload, sign out), **not** with the MetaMask extension itself. |
 | Receipt OCR | **Real engine, tried on rendered samples** | Tesseract.js (open source) reads the screenshot **in the browser**: the image is never uploaded to the app's server. The first scan downloads the engine from a public CDN. Verified in a real browser on two rendered sample receipts (provider, distance, date and vehicle read; an electric model flagged; a petrol car not flagged; an image with no text falls back to manual entry). **No real Ola/Uber/Rapido receipt was available**, so accuracy on real screenshots is unproven. EVs are flagged from the model list or from EV wording, but the commuter still confirms the fuel. Driver names and plates are never read out. |
 | Ride-hail classification | **User-confirmed** | The vehicle that carried the commuter (model, body, fuel) is confirmed by the commuter; OCR is only a suggestion. No access to Ola/Uber/Rapido data. An electric cab maps to EV_CAR/EV_2W; petrol/diesel/CNG cabs are never rewarded. A receipt distance within ±15% of the GPS distance is required. |
 | Oracle signing | **Real code, verified locally** | Re-verifies the evidence, recomputes distance and emissions, applies the reward policy, reads the nonce from the chain, signs the exact EIP-712 payload (viem). **Tested against the compiled contract in-process and in a browser against a local dev chain; never run against Portal V3.** |
 | Wallet transaction | **Real EIP-1193** | `recordCommute` is sent by the commuter's own wallet; receipt, minted amount (from `Transfer` logs) and `getCommuter` are read back. Browser-tested with a **mock** wallet, not MetaMask. |
 | Portal V3 | **Contract deployed and verified; app not connected** | v2 is live at `0x0904244017324dc1bf7c611fe1236936ee65fc82` (tx `0x11562d9b…ca965`, block 309126) and `npm run contract:verify` confirms its code, domain separator, owner and oracle. The repo still holds no RPC URL, contract address or oracle key, so the app is DEMO until a server is given them. No `recordCommute` has been sent to the deployed contract yet. On 2026-11-04 the verifier node, running the real code and the real oracle key against the real chain, signed a metro trip and the deployed contract accepted it in an `eth_call` simulation; a tampered copy and a different commuter were both rejected. Nothing was sent. One `recordCommute` is estimated at about 35 tPOT at the gas price seen that day. |
-| Redemptions | **Simulated** | The contract has no `redeem`/`burn`. Redemptions are local D4 records; on-chain balance is unchanged and the UI says so. |
+| Redemptions | **Simulated** | The contract has no `redeem`/`burn`. Redemptions are local records; on-chain balance is unchanged and the UI says so. |
 | Analytics community data | **Synthetic** | Same as before (deterministic, 42 invented commuters), now generated through the same engine and policy. |
 | Database / BI tool / indexer | **Not integrated** | |
 
@@ -116,4 +116,4 @@ nothing persists).
 * Trip evidence (location samples) is held only in memory in the browser, so a signature can be requested only before the page is reloaded.
 * The wallet connection is restored silently after a reload only if it was connected in the same tab and not disconnected.
 * The visual theme is the app's existing light/dark system, not the specific #080B10/#101823 palette in the brief; I did not restyle the product.
-* Several earlier screens still carry some wording from the old design (e.g. step labels); the main flows were updated, not every string audited.
+* On 2026-11-04 the on-screen wording was audited: the process-number and data-store labels carried over from the design diagrams were removed, and the sign-in screen no longer mentions a phone number or OTP.
