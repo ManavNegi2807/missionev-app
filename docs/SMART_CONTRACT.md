@@ -25,6 +25,10 @@ different thing from the native tPOT used for gas.
 | `nonces(address)`, `processedTrips(bytes32)`, `commuters(address)` | anyone (view) | Replay protection and profile state |
 | `DOMAIN_SEPARATOR`, `TRIP_TYPEHASH` | anyone (view) | EIP-712 constants |
 
+Two names come from the contract's original design and are part of the deployed ABI, so they cannot change without a redeploy: the
+oracle-signer getter `azureOracleSigner` and the owner-only replacement function `setAzureOracle`. Everywhere else the project calls
+the role the "oracle signer" or the "verifier node".
+
 Events: `Transfer`, `Approval`, `CommuteVerified(commuter, tripId, mode, distanceMeters, co2AvoidedGrams, pointsMinted, newCarbonScore)`,
 `StreakUpdated`, `OracleUpdated`.
 

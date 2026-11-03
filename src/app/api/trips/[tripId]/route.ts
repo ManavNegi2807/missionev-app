@@ -4,7 +4,7 @@ import { getRuntime } from "@/server/runtime";
 
 /**
  * GET /api/trips/:tripId — what the oracle signed for this trip id (from this server's memory) and whether the contract
- * has processed it. The memory stands in for the future Cosmos DB trip store and is empty after a restart; the on-chain
+ * has processed it. The memory stands in for a future database trip store and is empty after a restart; the on-chain
  * `processedTrips` flag is the durable truth.
  */
 export async function GET(_req: Request, ctx: { params: Promise<{ tripId: string }> }) {

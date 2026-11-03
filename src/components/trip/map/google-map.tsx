@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import type { MapHandle } from "@/lib/maps/azure";
+import type { MapHandle } from "@/lib/maps/types";
 import { createGoogleMap, type GoogleMapController } from "@/lib/maps/google";
 import type { MapViewProps } from "./types";
 

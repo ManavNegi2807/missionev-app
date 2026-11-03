@@ -4,11 +4,10 @@ import { useMemo, useRef, useState } from "react";
 import { LocateFixed, Minus, Plus, Radio, TrainFront } from "lucide-react";
 import { cn } from "@/lib/format";
 import { Badge, Panel } from "@/components/ui/primitives";
-import { azureConfigured, type MapHandle } from "@/lib/maps/azure";
 import { googleConfigured } from "@/lib/maps/google";
 import { PROVIDER_NAME } from "@/lib/maps/provider";
+import type { MapHandle } from "@/lib/maps/types";
 import { useTrip } from "@/providers/trip-provider";
-import { AzureMapView } from "./map/azure-map";
 import { DemoMapView } from "./map/demo-map";
 import { GoogleMapView } from "./map/google-map";
 import { OsmMapView } from "./map/osm-map";
@@ -16,18 +15,17 @@ import { OsmMapView } from "./map/osm-map";
 type LoadState = "loading" | "ready" | "error";
 
 /**
- * Basemap choice, first available wins: Google Maps (key set) → Azure Maps (key set) → the keyless OpenStreetMap
- * basemap. A provider that fails at runtime (bad or restricted key, no network) hands over to the next one.
- * The offline demo map is only the last resort (e.g. no network, so no tiles can load).
+ * The trip map. By default it is Leaflet on OpenStreetMap tiles: no API key, dark-mode tiles when the app theme is
+ * dark, and a green route and trail. Google Maps is an optional override, used only if a key is set. A provider that
+ * fails at runtime (bad or restricted key, no network) hands over to the next one, and the offline demo map is the
+ * last resort (e.g. no network, so no tiles can load).
  */
 export function MapPanel() {
   const { status, setup, route, live, gps, record } = useTrip();
   const handle = useRef<MapHandle>(null);
   const [google, setGoogle] = useState<LoadState>(googleConfigured ? "loading" : "error");
-  const [azure, setAzure] = useState<LoadState>(azureConfigured ? "loading" : "error");
   const [osm, setOsm] = useState<LoadState>("loading");
   const [googleError, setGoogleError] = useState<string | null>(null);
-  const [azureError, setAzureError] = useState<string | null>(null);
   const [osmError, setOsmError] = useState<string | null>(null);
   /** The commuter's own choice for the metro layer; null = follow the travel mode (on while travelling by metro). */
   const [metroChoice, setMetroChoice] = useState<boolean | null>(null);
@@ -38,9 +36,9 @@ export function MapPanel() {
   const showTrail = status !== "IDLE" || live.samples.length > 1;
   const source = status === "IDLE" ? setup.source : (record?.source ?? setup.source);
   const simRoute = source === "simulated" ? route : null;
-  const provider = google !== "error" ? "google" : azure !== "error" ? "azure" : osm !== "error" ? "osm" : "demo";
+  const provider = google !== "error" ? "google" : osm !== "error" ? "osm" : "demo";
   const recording = status === "RECORDING";
-  // Only the OpenStreetMap and Google basemaps can draw metro lines; Azure and the offline demo map have no such layer.
+  // Only the OpenStreetMap and Google basemaps can draw metro lines; the offline demo map has no such layer.
   const supportsMetro = provider === "osm" || provider === "google";
   const metroOn = supportsMetro && (metroChoice ?? setup.mode === "metro");
 
@@ -74,17 +72,6 @@ export function MapPanel() {
               setGoogle("error");
             }}
           />
-        ) : provider === "azure" ? (
-          <AzureMapView
-            key="azure"
-            ref={handle}
-            {...props}
-            onReady={() => setAzure("ready")}
-            onError={(m) => {
-              setAzureError(m);
-              setAzure("error");
-            }}
-          />
         ) : provider === "osm" ? (
           <OsmMapView
             key="osm"
@@ -107,11 +94,6 @@ export function MapPanel() {
               {google === "ready" ? "Google Maps basemap" : "Google Maps loading…"}
             </Badge>
           )}
-          {provider === "azure" && (
-            <Badge tone={azure === "ready" ? "ok" : "cyan"} dot>
-              {azure === "ready" ? "Azure Maps basemap" : "Azure Maps loading…"}
-            </Badge>
-          )}
           {provider === "osm" && (
             <Badge tone={osm === "ready" ? "ok" : "cyan"} dot>
               {osm === "ready" ? "OpenStreetMap basemap" : "Map loading…"}
@@ -124,7 +106,6 @@ export function MapPanel() {
           )}
           {provider !== "demo" && source === "simulated" && <Badge tone="warn">Simulated route</Badge>}
           {googleError && provider !== "google" && <Badge tone="err">Google Maps error — using {PROVIDER_NAME[provider]}</Badge>}
-          {azureError && provider !== "azure" && <Badge tone="err">Azure Maps error — using {PROVIDER_NAME[provider]}</Badge>}
           {osmError && provider === "demo" && <Badge tone="err">Map tiles unavailable — showing demo map</Badge>}
         </div>
 

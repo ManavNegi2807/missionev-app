@@ -28,7 +28,7 @@ no `redeem`; $MEV is a prototype token, not a certified carbon credit.
 4. **How it works.** The sequence diagram from [`ARCHITECTURE.md`](ARCHITECTURE.md): trip, oracle, wallet-submitted transaction.
 5. **Why Portal V3 is essential.** EVM compatibility (EIP-712, `ecrecover`, ERC-20), commuter-submitted transactions, on-chain streaks and
    score, and an open record of every reward. Include the deployed address and transaction hash.
-6. **Proof of functionality.** 104 tests (the compiled contract runs in an in-process EVM), a verified live deployment, browser checks of
+6. **Proof of functionality.** 100+ tests (the compiled contract runs in an in-process EVM), a verified live deployment, browser checks of
    the full flow, an audit of the supplied contract with fixes in v2.
 7. **Honest limits and next steps.** Mock OTP, in-memory oracle limits, placeholder metro and e-bus factors, no on-chain redeem. Roadmap: a
    durable store, real authentication, sourced factors, a redeemable partner catalogue.

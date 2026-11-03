@@ -2,11 +2,11 @@
 
 import "leaflet/dist/leaflet.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import type { MapHandle } from "@/lib/maps/azure";
+import type { MapHandle } from "@/lib/maps/types";
 import { createOsmMap, type OsmMapController } from "@/lib/maps/osm";
 import type { MapViewProps } from "./types";
 
-/** Keyless OpenStreetMap basemap (Leaflet). Mounted when no Azure Maps key is configured; reports readiness/errors upward. */
+/** Leaflet + OpenStreetMap basemap: no API key, dark-mode tiles when the app theme is dark, green route and trail lines. Reports readiness/errors upward. */
 export const OsmMapView = forwardRef<MapHandle, MapViewProps & { onReady(): void; onError(msg: string): void }>(function OsmMapView(
   { route, trail, position, metro, onReady, onError },
   ref,

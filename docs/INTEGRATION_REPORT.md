@@ -1,6 +1,8 @@
 # MissionEV upgrade — what is real, what is simulated, what was tested
 
-Date of this report: 2026-10-31. This describes the repository as it stands; nothing here was deployed anywhere.
+Date of this report: 2026-10-31, updated 2026-11-04. This describes the repository as it stands. The contract was deployed to Portal V3 on
+2026-11-03 (see the Portal V3 row). On 2026-11-04 the stack became fully open source: Leaflet and OpenStreetMap for the map, Tesseract.js
+for receipt OCR, and the verifier node at `/api/sign-trip`.
 
 ## Architecture as built
 
@@ -8,17 +10,16 @@ Date of this report: 2026-10-31. This describes the repository as it stands; not
 Client (Next.js 16, React 19)        Server (Next route handlers = the Node.js API layer)        Chain
 ────────────────────────────         ──────────────────────────────────────────────────         ─────
 sign-in → transport profile  ──►     /api/auth/otp/{request,verify}   MOCK (demo OTP)
-journey mode chosen per trip ──►     /api/vision/ocr                  Azure AI Vision Read (needs keys)
-GPS capture + local checks   ──►     /api/trips/calculate, /verify    shared carbon engine / oracle checks
-wallet signs a free proof    ──►     /api/oracle/sign-trip            re-verify → recalc → EIP-712 sign
+journey mode chosen per trip        (receipt OCR runs in the browser with Tesseract.js: no upload)
+GPS capture + local checks   ──►     /api/trips/calculate, /verify    shared carbon engine / verifier checks
+wallet signs a free proof    ──►     /api/sign-trip                   re-verify → recalc → EIP-712 sign
 wallet sends recordCommute   ───────────────────────────────────────────────────────────────►  MissionEV.sol
 read back balance / profile  ◄──     /api/commuter/:a, /api/rewards/:a, /api/trips/:id  (RPC reads)
 ```
 
-The "Azure Functions" layer is implemented as Next route handlers because that is the project's existing routing. They are plain
-`Request → Response` functions with the logic in `src/server/*` and `src/lib/*`, so porting them to Azure Functions (or hosting
-the Next app on Azure) needs only a thin wrapper. **No Azure Function, Azure Maps routing, Cosmos DB or Power BI is deployed or
-called by this code**, other than the optional Azure AI Vision call described below.
+The verifier node (the oracle signer) is implemented as Next route handlers. They are plain `Request → Response` functions with the
+logic in `src/server/*` and `src/lib/*`, so they run on any Node host. **No hosted function platform, managed database, BI tool or paid
+maps, routing or OCR service is called by this code.**
 
 ## Real vs simulated
 
@@ -34,14 +35,14 @@ called by this code**, other than the optional Azure AI Vision call described be
 | Vehicle model catalogue | **Names only** | `src/data/vehicle-catalog.json` ships **no** efficiency figures. "Don't know your mileage?" therefore never finds a manufacturer figure; it falls back to the commuter's estimate or a labelled category default (low confidence). Add cited figures to the JSON to enable look-ups. |
 | Vehicle profile | **Self-declared** | No registry. Stored in `sessionStorage` (D1). |
 | Phone / OTP | **Mock** | Fixed demo OTP; server routes exist and check it, rate-limited, but this is **not authentication** and no SMS is sent. The UI says "DEMO OTP — no SMS is sent". |
-| Receipt OCR | **Adapter, untested against Azure** | `POST /api/vision/ocr` calls Azure AI Vision Image Analysis 4.0 (Read) when `AZURE_VISION_ENDPOINT`/`KEY` are set; otherwise answers 501 and the UI switches to manual entry. **No Azure key was available, so the Azure call itself has never been run.** The receipt parser was tested only on synthetic text (no real Ola/Uber/Rapido receipts were available), so field extraction on real receipts is unproven. Images are held in memory for one request, never stored or logged; driver names/plates are never read out. |
+| Receipt OCR | **Real engine, tried on rendered samples** | Tesseract.js (open source) reads the screenshot **in the browser**: the image is never uploaded to the app's server. The first scan downloads the engine from a public CDN. Verified in a real browser on two rendered sample receipts (provider, distance, date and vehicle read; an electric model flagged; a petrol car not flagged; an image with no text falls back to manual entry). **No real Ola/Uber/Rapido receipt was available**, so accuracy on real screenshots is unproven. EVs are flagged from the model list or from EV wording, but the commuter still confirms the fuel. Driver names and plates are never read out. |
 | Ride-hail classification | **User-confirmed** | The vehicle that carried the commuter (model, body, fuel) is confirmed by the commuter; OCR is only a suggestion. No access to Ola/Uber/Rapido data. An electric cab maps to EV_CAR/EV_2W; petrol/diesel/CNG cabs are never rewarded. A receipt distance within ±15% of the GPS distance is required. |
 | Oracle signing | **Real code, verified locally** | Re-verifies the evidence, recomputes distance and emissions, applies the reward policy, reads the nonce from the chain, signs the exact EIP-712 payload (viem). **Tested against the compiled contract in-process and in a browser against a local dev chain; never run against Portal V3.** |
 | Wallet transaction | **Real EIP-1193** | `recordCommute` is sent by the commuter's own wallet; receipt, minted amount (from `Transfer` logs) and `getCommuter` are read back. Browser-tested with a **mock** wallet, not MetaMask. |
 | Portal V3 | **Contract deployed and verified; app not connected** | v2 is live at `0x0904244017324dc1bf7c611fe1236936ee65fc82` (tx `0x11562d9b…ca965`, block 309126) and `npm run contract:verify` confirms its code, domain separator, owner and oracle. The repo still holds no RPC URL, contract address or oracle key, so the app is DEMO until a server is given them. No `recordCommute` has been sent to the deployed contract yet. |
 | Redemptions | **Simulated** | The contract has no `redeem`/`burn`. Redemptions are local D4 records; on-chain balance is unchanged and the UI says so. |
 | Analytics community data | **Synthetic** | Same as before (deterministic, 42 invented commuters), now generated through the same engine and policy. |
-| Cosmos DB / Power BI / indexer | **Not integrated** | |
+| Database / BI tool / indexer | **Not integrated** | |
 
 ## How a journey is decided
 
@@ -61,7 +62,7 @@ walking/cycling 4, petrol/diesel car 5, SUV 6; petrol two-wheeler, CNG and unkno
 
 ## Configuration (server-only unless noted)
 
-`ORACLE_PRIVATE_KEY`, `MISSIONEV_CONTRACT_ADDRESS`, `PORTAL_RPC_URL`, `AZURE_VISION_ENDPOINT`, `AZURE_VISION_KEY`,
+`ORACLE_PRIVATE_KEY`, `MISSIONEV_CONTRACT_ADDRESS`, `PORTAL_RPC_URL`,
 `ORACLE_SIGNATURE_TTL_SECONDS` (default 600, max 3600), `ORACLE_MAX_TRIPS_PER_DAY` (default 8). Public: `NEXT_PUBLIC_MEV_CONTRACT_ADDRESS`,
 `NEXT_PUBLIC_PORTAL_RPC_URL` (+ the existing map keys). A test asserts no secret has a `NEXT_PUBLIC_` spelling and that the signer
 module is imported only from `src/server`. **Use a fresh oracle key; do not reuse any key that was ever pasted or exposed.**
@@ -79,7 +80,7 @@ Then connect a wallet on chain 420420777 pointing at `http://127.0.0.1:8545`.
 
 `scripts/deploy-contract.mjs` (`npm run contract:deploy -- --artifact MissionEVv2.proposed`) is a **dry run unless you pass `--confirm`**.
 It refuses a wrong chain id (must be 420420777), a zero oracle address and a missing key, prints the deployer's tPOT balance and a gas
-estimate, and after broadcasting reads the contract back (code present, `azureOracleSigner`, `owner`, `DOMAIN_SEPARATOR`) before
+estimate, and after broadcasting reads the contract back (code present, the oracle signer, `owner`, `DOMAIN_SEPARATOR`) before
 reporting success. Run it yourself so the deployer key stays on your machine:
 
 ```bash
@@ -98,11 +99,11 @@ nothing persists).
 
 ## Tests that were actually run
 
-* `npm test` — 104 tests, 5 files: carbon engine, contract (compiled `MissionEV` and proposed `MissionEVv2` executed in an
+* `npm test` — 100+ tests: carbon engine, contract (compiled `MissionEV` and proposed `MissionEVv2` executed in an
   in-process EVM with Portal V3's chain id), oracle decision logic against the real contract, registration/ride-hail/receipt parsing,
   route handlers and secret hygiene.
 * `npm run typecheck` (`next typegen`, then `tsc --noEmit`), `npx eslint src tests scripts` — clean. `npx next build` — passes (Next 16, Cache Components).
-* Browser (Microsoft Edge via playwright-core): DEMO flow (sign-in → multi-vehicle profile → metro, EV, petrol, ride-hail petrol and
+* Browser (a Chromium browser, Edge, driven by playwright-core): DEMO flow (sign-in → multi-vehicle profile → metro, EV, petrol, ride-hail petrol and
   EV cab → demo credit → rewards → analytics) and LIVE flow (local chain + oracle + mock wallet → real-GPS EV trip → oracle signature
   → wallet transaction → on-chain balance equals the formula) — results in the final summary.
 * Viewports 1440×900, 1280×800, 1024×768, 768×1024, 390×844, 360×800 on Register, Capture Trip (EV and ride-hail), Rewards, Analytics:

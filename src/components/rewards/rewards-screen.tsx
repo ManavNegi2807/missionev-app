@@ -59,7 +59,7 @@ export function RewardsScreen() {
   return (
     <div className="space-y-8">
       <section aria-labelledby="rewards-title" className="space-y-4">
-        <p className="font-mono text-[11px] tracking-[0.2em] text-lime sm:text-xs">03 / CARBONCOIN ECONOMY</p>
+        <p className="font-mono text-[11px] tracking-[0.2em] text-lime sm:text-xs">03 / CARBON REWARDS</p>
         <h1 id="rewards-title" className="max-w-3xl text-[2rem] leading-[1.1] font-semibold tracking-tight text-balance sm:text-5xl">
           Impact has its rewards.
         </h1>

@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import { POST as otpRequest } from "@/app/api/auth/otp/request/route";
 import { POST as otpVerify } from "@/app/api/auth/otp/verify/route";
 import { POST as calculate } from "@/app/api/trips/calculate/route";
-import { POST as ocr } from "@/app/api/vision/ocr/route";
-import { POST as signTrip } from "@/app/api/oracle/sign-trip/route";
+import { POST as signTrip } from "@/app/api/sign-trip/route";
 import { integrationStatus, readConfig } from "@/server/config";
 
 const post = (body: unknown, raw = false) => new Request("http://localhost/x", { method: "POST", headers: { "content-type": "application/json" }, body: raw ? (body as string) : JSON.stringify(body) });
@@ -19,11 +18,11 @@ describe("server configuration", () => {
     expect(live.mode).toBe("LIVE");
   });
   it("never exposes secrets in the status object", () => {
-    const status = integrationStatus(readConfig({ MISSIONEV_CONTRACT_ADDRESS: ADDR, PORTAL_RPC_URL: "https://rpc.example", ORACLE_PRIVATE_KEY: KEY, AZURE_VISION_KEY: "visionsecret", AZURE_VISION_ENDPOINT: "https://v.example" }));
-    const text = JSON.stringify(status);
-    expect(text).not.toContain(KEY);
-    expect(text).not.toContain("visionsecret");
-    expect(status.ocr.configured).toBe(true);
+    const status = integrationStatus(readConfig({ MISSIONEV_CONTRACT_ADDRESS: ADDR, PORTAL_RPC_URL: "https://rpc.example", ORACLE_PRIVATE_KEY: KEY }));
+    expect(JSON.stringify(status)).not.toContain(KEY);
+  });
+  it("says receipt OCR runs in the browser, so no server setting or image upload is involved", () => {
+    expect(integrationStatus(readConfig({})).ocr).toEqual({ engine: "tesseract.js", runsIn: "browser" });
   });
   it("ignores malformed keys and addresses instead of half-using them", () => {
     const c = readConfig({ ORACLE_PRIVATE_KEY: "0x1234", MISSIONEV_CONTRACT_ADDRESS: "nope", PORTAL_RPC_URL: "ftp://x" });
@@ -33,7 +32,7 @@ describe("server configuration", () => {
     const { readdirSync, readFileSync, statSync } = await import("node:fs");
     const { join } = await import("node:path");
     const walk = (dir: string): string[] => readdirSync(dir).flatMap((f) => (statSync(join(dir, f)).isDirectory() ? walk(join(dir, f)) : /\.(ts|tsx|mjs)$/.test(f) ? [join(dir, f)] : []));
-    const hits = walk("src").filter((f) => /NEXT_PUBLIC_[A-Z_]*(PRIVATE|SECRET|ORACLE_KEY|VISION_KEY)/.test(readFileSync(f, "utf8")));
+    const hits = walk("src").filter((f) => /NEXT_PUBLIC_[A-Z_]*(PRIVATE|SECRET|ORACLE_KEY)/.test(readFileSync(f, "utf8")));
     expect(hits).toEqual([]);
     // and the signer is only imported by server code
     const importers = walk("src").filter((f) => /from "@\/lib\/oracle\/sign"/.test(readFileSync(f, "utf8")));
@@ -61,12 +60,7 @@ describe("route handlers", () => {
     expect(bad.status).toBe(400);
     expect((await calculate(post("not json", true))).status).toBe(400);
   });
-  it("OCR answers 501 (not a fake result) when Azure isn't configured", async () => {
-    const res = await ocr(new Request("http://localhost/x", { method: "POST", body: new FormData() }));
-    expect(res.status).toBe(501);
-    expect(await res.json()).toMatchObject({ status: "not-configured" });
-  });
-  it("the oracle route signs nothing when it isn't configured, and rejects garbage before that", async () => {
+  it("the verifier route (/api/sign-trip) signs nothing when it isn't configured, and rejects garbage before that", async () => {
     expect((await signTrip(post({ nope: true }))).status).toBe(400);
     const valid = { commuter: ADDR, proof: { message: "-", signature: `0x${"0".repeat(130)}` }, trip: { clientTripId: "trip_abcd", mode: "metro", source: "gps", startedAt: 1, endedAt: 2, distanceKm: 1, durationSec: 1, samples: [[1, 1, 1, 1], [1, 1, 2, 1]], vehicle: null, rideHail: null, occupants: 1 } };
     const res = await signTrip(post(valid));

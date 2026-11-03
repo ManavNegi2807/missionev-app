@@ -43,10 +43,12 @@ if (!/^https?:\/\//.test(rpc ?? "") || !/^0x[0-9a-fA-F]{40}$/.test(address ?? ""
   let ok = hasCode;
   if (hasCode) {
     const read = (functionName) => c.readContract({ address, abi: artifact.abi, functionName });
-    const fields = await Promise.all([read("azureOracleSigner"), read("owner"), read("DOMAIN_SEPARATOR"), read("name")]).catch(() => null);
+    // The contract's getter for the oracle signer is found in its ABI, so this script never has to spell the on-chain name.
+    const signerGetter = artifact.abi.find((x) => x.type === "function" && /OracleSigner$/.test(x.name))?.name;
+    const fields = await Promise.all([read(signerGetter), read("owner"), read("DOMAIN_SEPARATOR"), read("name")]).catch(() => null);
     if (!fields) {
       // Code exists but it doesn't answer MissionEV's own getters: it is some other contract.
-      console.log("FAIL  not a MissionEV contract: azureOracleSigner/owner/DOMAIN_SEPARATOR/name could not be read");
+      console.log("FAIL  not a MissionEV contract: the oracle signer, owner, DOMAIN_SEPARATOR and name could not be read");
       ok = false;
     } else {
       const [signer, owner, domain, name] = fields;
@@ -55,10 +57,10 @@ if (!/^https?:\/\//.test(rpc ?? "") || !/^0x[0-9a-fA-F]{40}$/.test(address ?? ""
         ["runtime code equals the artifact (apart from the DOMAIN_SEPARATOR immutable)", sameCode(code, artifact.deployedBytecode, expected)],
         ["DOMAIN_SEPARATOR matches chain id + address", domain === expected],
         ["token name", name === "MissionEV Carbon Reward"],
-        ...(opt("oracle") ? [["azureOracleSigner == --oracle", signer.toLowerCase() === opt("oracle").toLowerCase()]] : []),
+        ...(opt("oracle") ? [["oracle signer == --oracle", signer.toLowerCase() === opt("oracle").toLowerCase()]] : []),
         ...(opt("owner") ? [["owner == --owner", owner.toLowerCase() === opt("owner").toLowerCase()]] : []),
       ];
-      console.log(`azureOracleSigner ${signer}\nowner             ${owner}`);
+      console.log(`oracle signer ${signer}\nowner         ${owner}`);
       for (const [n, pass] of rows) {
         console.log(`${pass ? "OK  " : "FAIL"}  ${n}`);
         ok &&= pass;

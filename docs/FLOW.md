@@ -29,7 +29,7 @@ flowchart TD
   J -- no --> X4["Measured and shown, but nothing is signed"]
   J -- yes --> K{"Under the daily limit and not already recorded on-chain?"}
   K -- no --> X5["Refused: limit or duplicate"]
-  K -- yes --> L{"Oracle key equals the contract's azureOracleSigner?"}
+  K -- yes --> L{"Verifier key equals the contract's oracle signer?"}
   L -- no --> X6["Not signed: it would be rejected on-chain"]
   L -- yes --> M["Sign the EIP-712 TripPayload, valid 10 minutes by default"]
   M --> N["Your wallet sends recordCommute"]

@@ -1,6 +1,7 @@
 import { createPublicClient, http, type Hex } from "viem";
 import { MISSIONEV_ABI } from "@/lib/contract/missionev.abi";
 import { portalChain } from "@/lib/contract/chain";
+import { ORACLE_SIGNER_GETTER } from "@/lib/contract/names";
 import type { CommuterState } from "@/lib/carbon/rewardPreview";
 import type { ServerConfig } from "./config";
 
@@ -21,7 +22,7 @@ export function createChainReader(cfg: Pick<ServerConfig, "contract" | "rpcUrl">
   return {
     nonceOf: (c) => read<bigint>("nonces", [c]),
     isTripProcessed: (id) => read<boolean>("processedTrips", [id]),
-    oracleSigner: () => read<Hex>("azureOracleSigner"),
+    oracleSigner: () => read<Hex>(ORACLE_SIGNER_GETTER),
     async commuter(a) {
       const [carbonScore, streakDays, lastTripTimestamp, totalAvoidedGramsCO2, totalTripsLogged, tokenBalance] = await read<readonly bigint[]>("getCommuter", [a]);
       return {

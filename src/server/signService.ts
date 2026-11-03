@@ -157,7 +157,7 @@ export async function evaluateAndSign(req: SignRequest, deps: SignDeps): Promise
   try {
     const [oracleOnChain, processed, nonce] = await Promise.all([reader.oracleSigner(), reader.isTripProcessed(tripId), reader.nonceOf(req.commuter)]);
     if (oracleOnChain.toLowerCase() !== oracleAddressOf(config.oracleKey).toLowerCase()) {
-      return { status: "unavailable", httpStatus: 503, reason: "The configured oracle key isn't the contract's azureOracleSigner. A signature from it would be rejected on-chain, so nothing was signed.", checks };
+      return { status: "unavailable", httpStatus: 503, reason: "The configured oracle key isn't the contract's oracle signer. A signature from it would be rejected on-chain, so nothing was signed.", checks };
     }
     if (processed) return { status: "duplicate", httpStatus: 409, reason: "This trip is already recorded on-chain.", carbon, checks };
 

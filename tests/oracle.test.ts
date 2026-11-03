@@ -4,6 +4,7 @@ import type { Hex } from "viem";
 import { TRANSPORT_MODE } from "@/lib/carbon/contractMapping";
 import { previewReward } from "@/lib/carbon/rewardPreview";
 import type { VehicleEnergySpec } from "@/lib/carbon/types";
+import { ORACLE_SIGNER_GETTER } from "@/lib/contract/names";
 import { oracleRequestMessage } from "@/lib/oracle/walletProof";
 import type { RideHailInfo, TripVehicle } from "@/lib/trip/types";
 import type { ChainReader } from "@/server/chainReader";
@@ -24,14 +25,14 @@ async function env(overrides: Partial<ServerConfig> = {}, signerOnChain: Hex = o
   const reader: ChainReader = {
     nonceOf: (c) => read<bigint>("nonces", [c]),
     isTripProcessed: (id) => read<boolean>("processedTrips", [id]),
-    oracleSigner: () => read<Hex>("azureOracleSigner"),
+    oracleSigner: () => read<Hex>(ORACLE_SIGNER_GETTER),
     hasCode: async () => true,
     async commuter(a) {
       const [carbonScore, streakDays, lastTripTimestamp, totalAvoidedGramsCO2, totalTripsLogged, balanceWei] = await read<readonly bigint[]>("getCommuter", [a]);
       return { carbonScore: Number(carbonScore), streakDays: Number(streakDays), lastTripTimestamp: Number(lastTripTimestamp), totalAvoidedGramsCO2: Number(totalAvoidedGramsCO2), totalTripsLogged: Number(totalTripsLogged), balanceWei };
     },
   };
-  const config: ServerConfig = { chainId: chain.chainId, contract, rpcUrl: "http://unused.local", oracleKey, signatureTtlSeconds: 600, maxTripsPerDay: 8, vision: null, ...overrides };
+  const config: ServerConfig = { chainId: chain.chainId, contract, rpcUrl: "http://unused.local", oracleKey, signatureTtlSeconds: 600, maxTripsPerDay: 8, ...overrides };
   return { chain, contract, config, reader, deps: { config, reader, store: createMemoryStore(), now: () => chain.now * 1000 } };
 }
 
@@ -199,7 +200,7 @@ describe("oracle: sign → the commuter's own wallet submits → the contract mi
     const noKey = await env({ oracleKey: null });
     expect(await evaluateAndSign(await request(noKey), noKey.deps)).toMatchObject({ status: "unavailable", httpStatus: 503, reason: expect.stringContaining("ORACLE_PRIVATE_KEY") });
     const mismatch = await env({}, privateKeyToAccount(generatePrivateKey()).address);
-    expect(await evaluateAndSign(await request(mismatch), mismatch.deps)).toMatchObject({ status: "unavailable", reason: expect.stringContaining("azureOracleSigner") });
+    expect(await evaluateAndSign(await request(mismatch), mismatch.deps)).toMatchObject({ status: "unavailable", reason: expect.stringContaining("oracle signer") });
   });
 });
 

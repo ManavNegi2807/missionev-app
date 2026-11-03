@@ -18,7 +18,7 @@ commuter's own wallet submits. Built for the Portaldot Hacker House 2026.
 |---|---|
 | Smart contract | **Live on Portal V3 testnet and verified**: [`0x0904…fc82`](#deployed-on-portal-v3-testnet) |
 | Web app | Runs locally in **DEMO** mode, clearly labelled. LIVE needs a server with the oracle key (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)) |
-| Tests | 104 passing, including the compiled contract executed in an in-process EVM; CI runs lint, type-check, tests and build |
+| Tests | 100+ passing, including the compiled contract executed in an in-process EVM; CI runs lint, type-check, tests and build |
 | Not yet | A hosted demo link, and a first `recordCommute` transaction sent from the web app to the deployed contract |
 | Honesty | Sign-in uses a demo OTP, redemptions are simulated, community analytics are synthetic. See [real versus simulated](docs/INTEGRATION_REPORT.md) |
 
@@ -63,7 +63,7 @@ sequenceDiagram
   W-->>B: proof
   B->>O: trip evidence and proof
   O->>O: verify proof, recompute distance and carbon, apply reward policy
-  O->>R: read nonce, processedTrips, azureOracleSigner
+  O->>R: read nonce, processedTrips, oracle signer
   O-->>B: EIP-712 signature over exactly what the oracle derived
   B->>W: send recordCommute(...)
   W->>M: transaction from the commuter
@@ -74,7 +74,7 @@ sequenceDiagram
 1. Capture the trip (real GPS, or a labelled simulation) and choose **how you travelled** for it.
 2. Local checks run in the browser; the oracle re-runs them on the evidence it receives.
 3. `src/lib/carbon` computes actual emissions and a reference journey, and `co2AvoidedGrams = max(0, floor(reference - actual))`.
-4. Your wallet signs a free proof message; `POST /api/oracle/sign-trip` re-verifies, **recalculates itself**, reads your nonce from the
+4. Your wallet signs a free proof message; `POST /api/sign-trip` (the verifier node) re-verifies, **recalculates itself**, reads your nonce from the
    chain and signs the exact EIP-712 `TripPayload`. The key never leaves the server.
 5. Your wallet sends `recordCommute(tripId, mode, distanceMeters, co2AvoidedGrams, deadline, sig)`. The contract credits `msg.sender`, so
    the oracle can sign a trip but can never submit it.
@@ -102,7 +102,7 @@ More: [`docs/FLOW.md`](docs/FLOW.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE
 | Contract | `MissionEVv2` at `0x0904244017324dc1bf7c611fe1236936ee65fc82` |
 | Deploy transaction | `0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d9ca965` (block 309126, 2026-11-03 17:41 UTC) |
 | Owner / deployer | `0x184Ef822438f5D64C9dD41F570af794b347CE84e` |
-| Oracle signer (`azureOracleSigner`) | `0x2aD67FaC8dB8fF3255bA650639049020420160De` |
+| Oracle signer (the verifier node's address) | `0x2aD67FaC8dB8fF3255bA650639049020420160De` |
 | Public proof | [indexer record of the deploy transaction](https://portalindex-98f0.onrender.com/evm_transactions?tx_hash=eq.0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d9ca965) |
 
 The deployed contract is the fixed v2 in [`contracts/proposed/MissionEVv2.sol`](contracts/proposed/MissionEVv2.sol) (see the audit for what
@@ -118,7 +118,7 @@ It reads the code from the chain and compares it with the compiled artifact (apa
 fills in), recomputes the EIP-712 domain separator for this chain and address, and checks the token name, oracle and owner. The deploy
 record is in [`contracts/deployments/`](contracts/deployments/). **Status as of this commit:** the contract is live and verified, but no
 `recordCommute` transaction has been sent to it yet, and the web app runs in DEMO until a server is given the oracle key. The owner can
-replace the oracle with `setAzureOracle`, so the owner key matters as much as the oracle key. Details: [`docs/SMART_CONTRACT.md`](docs/SMART_CONTRACT.md).
+replace the oracle signer, so the owner key matters as much as the oracle key. Details: [`docs/SMART_CONTRACT.md`](docs/SMART_CONTRACT.md).
 
 ## DEMO and LIVE
 
@@ -134,17 +134,18 @@ transaction. `GET /api/status` shows what is configured, never the secrets.
 | Transport profile | Ten modes, multi-vehicle; EV efficiency from battery and range or kWh per 100 km; petrol and diesel from km per litre; honest "don't know" fallbacks with confidence labels |
 | Per-trip mode | Every trip asks how you travelled; a petrol cab is measured as a petrol cab even if you own an EV |
 | Carbon engine | One accounting boundary for all modes, sourced factors (CEA grid factor, FY 2016-17 to 2025-26), formulas with substituted inputs, confidence and assumptions |
-| Oracle | Re-verifies the evidence, recalculates, applies the reward policy, reads the nonce from the chain, signs the exact EIP-712 payload |
+| Verifier node | `POST /api/sign-trip`: re-verifies the evidence, calculates the CO2 avoided itself, applies the reward policy, reads the nonce from the chain, signs the exact EIP-712 payload |
 | Verification engine | Four checks (vehicle profile, ride log, motion, route) then a trust level |
-| Ride-hail | Receipt details by OCR (Azure AI Vision, optional) or manual entry, with the commuter confirming the vehicle |
+| Ride-hail | Receipt text read by Tesseract.js in the browser (the image never leaves the device), electric vehicles flagged, with the commuter confirming the vehicle |
 | Rewards | Exact preview of the contract's arithmetic, real `balanceOf` read-back, separate tPOT gas balance, labelled simulated redemptions |
 | Analytics | ESG dashboards, journey table, leaderboard, definitions and data sources |
 | Tooling | Dry-run deploy script, read-only verifier, a local in-memory chain, an audit of the supplied contract |
 
 ## Tech stack
 
-Next.js 16 (App Router, Cache Components), React 19, Tailwind v4, TypeScript, viem, recharts, Leaflet (OpenStreetMap) with optional Google
-or Azure Maps, Solidity 0.8 compiled with solc-js 0.8.34, vitest with `@ethereumjs/vm`. Full list with licences: [`THIRD_PARTY.md`](THIRD_PARTY.md).
+Open-source stack: Next.js 16 (App Router, Cache Components) with the verifier node as route handlers, React 19, Tailwind v4, TypeScript,
+viem, recharts, **Leaflet + OpenStreetMap** for the map (an optional Google key can override it), **Tesseract.js** for receipt OCR,
+Solidity 0.8 compiled with solc-js 0.8.34, vitest with `@ethereumjs/vm`. Full list with licences: [`THIRD_PARTY.md`](THIRD_PARTY.md).
 
 ## Repository map
 
@@ -158,21 +159,21 @@ or Azure Maps, Solidity 0.8 compiled with solc-js 0.8.34, vitest with `@ethereum
 | `src/providers/`, `src/components/` | App state and UI |
 | `contracts/` | `MissionEV.sol` (as supplied), `proposed/MissionEVv2.sol` (deployed), compiled artifacts, deployment record |
 | `scripts/` | `compile-contract`, `deploy-contract`, `verify-deployment`, `dev-chain` |
-| `tests/` | 104 vitest tests: carbon, contract, oracle, transport, routes |
+| `tests/` | 100+ vitest tests: carbon, contract, oracle, transport, routes, receipt OCR |
 | `docs/` | Architecture, flow, frontend, backend, contract, deployment, audit, integration report, demo script, checklist |
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local`. **Server-only** (never `NEXT_PUBLIC_`): `ORACLE_PRIVATE_KEY`, `MISSIONEV_CONTRACT_ADDRESS`,
-`PORTAL_RPC_URL`, `AZURE_VISION_ENDPOINT`, `AZURE_VISION_KEY`, `ORACLE_SIGNATURE_TTL_SECONDS`, `ORACLE_MAX_TRIPS_PER_DAY`.
-**Public:** `NEXT_PUBLIC_MEV_CONTRACT_ADDRESS`, `NEXT_PUBLIC_PORTAL_RPC_URL`, `NEXT_PUBLIC_PORTAL_CURRENCY_SYMBOL`,
-`NEXT_PUBLIC_PORTAL_EXPLORER_URL`, `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_AZURE_MAPS_KEY` (map keys are visible to every visitor:
-restrict them by domain). Use a **fresh** oracle key whose address is the contract's `azureOracleSigner`.
+Copy `.env.example` to `.env.local`. It already holds the public values of the deployment (contract address, RPC URL, tPOT symbol); every
+secret is blank. **Server-only** (never `NEXT_PUBLIC_`): `ORACLE_PRIVATE_KEY`, `MISSIONEV_CONTRACT_ADDRESS`, `PORTAL_RPC_URL`,
+`ORACLE_SIGNATURE_TTL_SECONDS`, `ORACLE_MAX_TRIPS_PER_DAY`. **Public:** `NEXT_PUBLIC_MEV_CONTRACT_ADDRESS`, `NEXT_PUBLIC_PORTAL_RPC_URL`,
+`NEXT_PUBLIC_PORTAL_CURRENCY_SYMBOL`, `NEXT_PUBLIC_PORTAL_EXPLORER_URL`, and the optional `NEXT_PUBLIC_GOOGLE_MAPS_KEY` (visible to every
+visitor: restrict it by domain). Receipt OCR needs no setting. Use a **fresh** oracle key whose address is the contract's oracle signer.
 
 ## Testing
 
 ```bash
-npm test           # 104 tests
+npm test           # the full suite
 npm run lint && npm run typecheck && npm run build
 ```
 
@@ -212,9 +213,9 @@ masked; receipt images never stored; mock data stays labelled DEMO.
 <details>
 <summary><strong>Maps and theme</strong></summary>
 
-Basemap, first available wins: Google Maps (`NEXT_PUBLIC_GOOGLE_MAPS_KEY`), then Azure Maps (`NEXT_PUBLIC_AZURE_MAPS_KEY`), then keyless
-OpenStreetMap (Leaflet). A provider that fails at runtime hands over to the next; a labelled offline demo map is the last resort. A metro
-layer is on by default for metro trips. Colours are CSS variables in `src/app/globals.css` (light by default, `:root[data-theme="dark"]`
+The map is **Leaflet on OpenStreetMap tiles**: no key, dark-mode tiles when the theme is dark, and a green route and trail. A Google Maps
+key (`NEXT_PUBLIC_GOOGLE_MAPS_KEY`) overrides it if you set one. A provider that fails at runtime hands over to the next; a labelled
+offline demo map is the last resort. A metro layer is on by default for metro trips. Colours are CSS variables in `src/app/globals.css` (light by default, `:root[data-theme="dark"]`
 overrides); charts and the map read the variables.
 </details>
 
@@ -223,7 +224,8 @@ overrides); charts and the map read the variables.
 * Sign-in is a **mock**: a fixed demo OTP, no SMS and no real authentication.
 * The oracle's daily limit and duplicate memory are in process memory (reset on restart, per instance); the on-chain `processedTrips` flag is
   the durable guard. A durable store is the next step.
-* Receipt OCR code has never run against the real Azure service, and the parser was only tested on synthetic text.
+* Receipt OCR (Tesseract.js) was tried on rendered sample receipts, not real Ola, Uber or Rapido screenshots, so accuracy on real ones is
+  unproven. The first scan downloads the OCR engine from a public CDN, so it needs a connection once.
 * Metro, e-bus, CNG and the reference-vehicle factors are low-confidence placeholders and are flagged as such in the UI; the vehicle model
   catalogue has names only, no efficiency figures.
 * The contract has no `redeem` or `burn`, so redemptions are a labelled simulation, and community analytics data is synthetic.
@@ -246,7 +248,7 @@ overrides); charts and the map read the variables.
 
 ## Roadmap
 
-A durable oracle store (for example Cosmos DB), real SMS authentication, sourced metro and e-bus factors and vehicle efficiency data,
+A durable verifier-node store (a database), real SMS authentication, sourced metro and e-bus factors and vehicle efficiency data,
 a redeemable partner catalogue, and a hosted demo. A transit operator or employer pilot is the commercial path.
 
 ## Team and licence

@@ -1,15 +1,15 @@
 import type { LatLng } from "@/lib/trip/geo";
-import type { MapHandle } from "./azure";
+import type { MapHandle } from "./types";
 
 /**
- * Keyless basemap: Leaflet + the OpenStreetMap standard tile server. It works with no API key, so it is the
- * default whenever Azure Maps isn't configured. The dark theme recolours the same tiles with a CSS filter
- * (OSM publishes no dark tile set). Attribution is required by the OSM licence and is always shown.
+ * The default basemap: Leaflet + the OpenStreetMap standard tile server. It needs no API key. The dark theme
+ * recolours the same tiles with a CSS filter (OSM publishes no dark tile set), so dark mode gets dark tiles without a
+ * third-party tile host. Attribution is required by the OSM licence and is always shown.
  *
  * openstreetmap.org's tile servers are for light, interactive use (see their tile usage policy), which fits a
- * prototype. For production traffic set NEXT_PUBLIC_AZURE_MAPS_KEY (preferred, see azure.ts) or point TILE_URL
- * at a commercial / self-hosted tile provider. Note that "free keyless" third-party tile hosts change their
- * terms: CARTO's basemaps, for one, now return an "API key required" watermark instead of map tiles.
+ * prototype. For production traffic point TILE_URL at a self-hosted or commercial tile provider. Note that "free
+ * keyless" third-party tile hosts change their terms: CARTO's basemaps, for one, now return an "API key required"
+ * watermark instead of map tiles.
  */
 const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const DARK_FILTER = "invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88)";
@@ -87,7 +87,8 @@ export async function createOsmMap(
 
   const pal = palette();
   const dot = (color: string, radius: number) => ({ radius, color: pal.ring, weight: 2, fillColor: color, fillOpacity: 1 });
-  const routeLine = L.polyline([], { color: pal.start, weight: 3, opacity: 0.65, dashArray: "2 7" }).addTo(map);
+  // Both lines are green: the planned route is the dashed one, the captured trail the solid one drawn over it.
+  const routeLine = L.polyline([], { color: pal.vehicle, weight: 3, opacity: 0.7, dashArray: "2 7" }).addTo(map);
   const trailLine = L.polyline([], { color: pal.vehicle, weight: 5, opacity: 0.95, lineJoin: "round", lineCap: "round" }).addTo(map);
   const startMarker = L.circleMarker(DEFAULT_CENTER, dot(pal.start, 7));
   const endMarker = L.circleMarker(DEFAULT_CENTER, dot(pal.end, 7));
@@ -135,7 +136,7 @@ export async function createOsmMap(
   const themeWatcher = new MutationObserver(() => {
     tint();
     const p = palette();
-    routeLine.setStyle({ color: p.start });
+    routeLine.setStyle({ color: p.vehicle });
     trailLine.setStyle({ color: p.vehicle });
     startMarker.setStyle({ fillColor: p.start, color: p.ring });
     endMarker.setStyle({ fillColor: p.end, color: p.ring });

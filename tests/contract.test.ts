@@ -3,6 +3,7 @@ import { decodeEventLog, hashDomain, hexToBigInt, keccak256, toBytes, toHex, typ
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { TRANSPORT_MODE } from "@/lib/carbon/contractMapping";
 import { previewReward, scoreAfterTrip } from "@/lib/carbon/rewardPreview";
+import { ORACLE_SIGNER_GETTER } from "@/lib/contract/names";
 import { signTripPayload } from "@/lib/oracle/sign";
 import { TRIP_TYPE_STRING, deriveTripId, eip712Domain, type TripPayload } from "@/lib/oracle/typedData";
 import { PORTAL_V3 } from "@/lib/chain";
@@ -58,7 +59,7 @@ describe.each(["v1", "v2"] as const)("MissionEV %s — signing and recording", (
     expect(PORTAL_V3.chainId).toBe(420420777);
     expect(await read<Hex>(c, "TRIP_TYPEHASH")).toBe(keccak256(toBytes(TRIP_TYPE_STRING)));
     expect(await read<Hex>(c, "DOMAIN_SEPARATOR")).toBe(hashDomain({ domain: eip712Domain(420420777, c.contract), types: { EIP712Domain: [{ name: "name", type: "string" }, { name: "version", type: "string" }, { name: "chainId", type: "uint256" }, { name: "verifyingContract", type: "address" }] } } as never));
-    expect(await read<Hex>(c, "azureOracleSigner")).toBe(oracle.address);
+    expect(await read<Hex>(c, ORACLE_SIGNER_GETTER)).toBe(oracle.address);
   });
 
   it("accepts an oracle-signed trip from the commuter's wallet and mints exactly what the preview says", async () => {

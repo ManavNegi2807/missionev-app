@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MissionEV · CarbonCoin Protocol",
-  description: "Decentralized EV carbon tracking and CarbonCoin rewards. Sign in with your mobile number and set your vehicle.",
+  title: "MissionEV · Carbon rewards on Portal V3",
+  description: "A Strava for carbon: journey-based emissions accounting with $MEV rewards on Portal V3. Reward the impact of the journey, not the ownership of the vehicle.",
 };
 
 export const viewport: Viewport = {

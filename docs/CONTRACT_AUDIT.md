@@ -14,7 +14,7 @@ same cases against the proposed v2). Severity is my own judgement of impact on a
 
 | # | Finding | Severity | Demonstrated | Handled how today (no contract change) | v2 |
 |---|---|---|---|---|---|
-| F1 | Constructor accepts `address(0)` as oracle. `ecrecover` returns `address(0)` for any invalid signature, so with a zero oracle **any garbage signature passes** and anyone can mint up to the `uint32` limit. (`setAzureOracle` does reject zero; the constructor doesn't.) | **Critical** if deployed that way | yes | Deploy with a real oracle address; the server refuses to sign if the configured key isn't the on-chain `azureOracleSigner`. | rejects zero |
+| F1 | Constructor accepts `address(0)` as oracle. `ecrecover` returns `address(0)` for any invalid signature, so with a zero oracle **any garbage signature passes** and anyone can mint up to the `uint32` limit. (the owner's oracle-replacement function does reject zero; the constructor doesn't.) | **Critical** if deployed that way | yes | Deploy with a real oracle address; the server refuses to sign if the configured key isn't the on-chain oracle signer. | rejects zero |
 | F2 | No low-s check: a valid signature `(r,s,v)` has a second valid twin `(r, n−s, v⊕1)`. | Low (replay is still blocked by `processedTrips` and the nonce) | yes | none needed | rejects high-s |
 | F3 | Signature length is not validated: a 66-byte blob is accepted (trailing byte ignored); shorter blobs read other calldata/zero. | Low | yes | client always sends 65 bytes | requires 65 |
 | F4 | `v` is not range-checked (relies on `ecrecover` returning 0). | Info | – | viem returns v = 27/28 | requires 27/28 |

@@ -35,6 +35,9 @@ if (!artifactName) die("pass --artifact MissionEV (v1, as supplied) or --artifac
 const file = join(root, "contracts", "artifacts", `${artifactName}.json`);
 if (!existsSync(file)) die(`no compiled artifact at ${file}. Run: npm run contract:compile`);
 const artifact = JSON.parse(readFileSync(file, "utf8"));
+// The contract's getter for the oracle signer is found in its ABI, so this script never has to spell the on-chain name.
+const signerGetter = artifact.abi.find((x) => x.type === "function" && /OracleSigner$/.test(x.name))?.name;
+if (!signerGetter) die("the artifact's ABI has no oracle-signer getter.");
 
 const key = process.env.DEPLOYER_PRIVATE_KEY;
 const watchOnly = process.env.DEPLOYER_ADDRESS; // public address: lets you preview cost and feasibility WITHOUT a key (never with --confirm)
@@ -76,7 +79,7 @@ console.log(`
 Contract : ${artifact.contractName}  (${artifact.source}, ${artifact.compiler.name} ${artifact.compiler.version}, evm ${artifact.compiler.settings.evmVersion})
 Network  : chain id ${chainId} (Portal V3)   RPC: ${new URL(rpc).origin}
 Deployer : ${deployer}   balance ${formatEther(balance)} tPOT   (becomes the contract owner)${account ? "" : "   [address only: preview]"}
-Oracle   : ${getAddress(oracle)}   (the contract's azureOracleSigner)
+Oracle   : ${getAddress(oracle)}   (the contract's oracle signer)
 Simulate : ${sim.ok ? `constructor runs on this chain and returns ${sim.bytes} bytes of code${sim.bytes === expectedBytes ? " (matches the artifact)" : ` (ARTIFACT HAS ${expectedBytes}: MISMATCH)`}` : `FAILED — ${sim.why}`}
 Gas      : ${gas ? `${gas} units` : "estimate unavailable (the RPC refused it; the account may be unfunded)"}${cost ? ` ≈ ${formatEther(cost)} tPOT at ${gasPrice} wei/gas` : ""}
 `);
@@ -104,11 +107,11 @@ const address = receipt.contractAddress;
 
 // Read it back: never report success on the strength of a receipt alone.
 const read = (functionName) => publicClient.readContract({ address, abi: artifact.abi, functionName });
-const [code, signer, owner, domain] = await Promise.all([publicClient.getCode({ address }), read("azureOracleSigner"), read("owner"), read("DOMAIN_SEPARATOR")]);
+const [code, signer, owner, domain] = await Promise.all([publicClient.getCode({ address }), read(signerGetter), read("owner"), read("DOMAIN_SEPARATOR")]);
 const expectedDomain = hashDomain({ domain: { name: "MissionEV", version: "1", chainId, verifyingContract: address }, types: { EIP712Domain: [{ name: "name", type: "string" }, { name: "version", type: "string" }, { name: "chainId", type: "uint256" }, { name: "verifyingContract", type: "address" }] } });
 const checks = [
   ["contract code present", Boolean(code && code !== "0x")],
-  ["azureOracleSigner == ORACLE_ADDRESS", signer.toLowerCase() === oracle.toLowerCase()],
+  ["oracle signer == ORACLE_ADDRESS", signer.toLowerCase() === oracle.toLowerCase()],
   ["owner == deployer", owner.toLowerCase() === deployer.toLowerCase()],
   ["DOMAIN_SEPARATOR matches chain id + address", domain === expectedDomain],
 ];

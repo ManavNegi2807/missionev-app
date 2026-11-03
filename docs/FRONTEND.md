@@ -11,7 +11,7 @@ Next.js 16 (App Router, Cache Components), React 19, Tailwind v4, recharts. `/` 
 | 03 Rewards | `/rewards` | $MEV balance (a labelled demo balance, or the real `balanceOf` when a real wallet is on Portal V3), the separate tPOT gas balance, journey and reward KPIs, a **simulated** redemption catalogue, and on-chain activity |
 | 04 ESG analytics | `/analytics` | Charts, a journey table, a leaderboard, definitions and data sources. Community data is deterministic and synthetic, and says so |
 
-Ride-hail trips (Ola, Uber, Rapido) ask for the receipt details (OCR when Azure Vision is configured, otherwise manual entry) and for the
+Ride-hail trips (Ola, Uber, Rapido) ask for the receipt details (read in the browser by Tesseract.js, with electric vehicles flagged, or typed by hand) and for the
 commuter to confirm the vehicle that carried them. The journey is calculated from that vehicle, not from the commuter's own.
 
 ## State
@@ -33,9 +33,18 @@ panel, ride-hail section, history), `rewards/`, `analytics/`, `shell/` (sidebar,
 
 ## Map
 
-First available wins: Google Maps (`NEXT_PUBLIC_GOOGLE_MAPS_KEY`), then Azure Maps (`NEXT_PUBLIC_AZURE_MAPS_KEY`), then keyless
-OpenStreetMap via Leaflet. A provider that fails at runtime hands over to the next, and a labelled offline demo map is the last resort. A
-metro overlay (OpenRailwayMap on OSM, Google's transit layer on Google) is on by default for metro trips.
+The default is **Leaflet on OpenStreetMap tiles**: no key, a green planned route (dashed) and captured trail (solid), and dark-mode tiles when
+the theme is dark (the same tiles recoloured with a CSS filter, so no third-party dark tile host is involved). A Google Maps key
+(`NEXT_PUBLIC_GOOGLE_MAPS_KEY`) overrides it if you set one. A provider that fails at runtime hands over to the next, and a labelled
+offline demo map is the last resort. A metro overlay (OpenRailwayMap on OSM, Google's transit layer on Google) is on by default for
+metro trips.
+
+## Receipt OCR
+
+Ride receipts are read in the browser by Tesseract.js (`src/lib/ocr/scan.ts`): the screenshot is never uploaded to the app's server. The
+text goes through `parseReceipt` (`src/lib/ocr/receipt.ts`), which suggests the provider, distance, date and vehicle and **flags electric
+vehicles**, either because the model matches an electric entry in the catalogue or because the receipt says EV or electric. The flag only
+pre-fills the form; the commuter still confirms the vehicle and fuel. The first scan downloads the OCR engine from a public CDN.
 
 ## Theme and layout
 

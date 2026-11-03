@@ -2,7 +2,8 @@ import type { Confidence, Powertrain, VehicleBody } from "@/lib/carbon/types";
 import { findModelInText, type CatalogEntry } from "@/lib/transport/catalog";
 
 /**
- * Turns the text lines Azure AI Vision's Read OCR returns for a ride receipt into structured, REVIEWABLE fields.
+ * Turns the text lines the OCR engine (Tesseract.js, run in the browser: see scan.ts) returns for a ride receipt into
+ * structured, REVIEWABLE fields, and flags receipts that point to an electric vehicle.
  *
  * OCR is text extraction, not proof: nothing here shows the ride happened, or what fuel the car uses, and receipts differ
  * by provider, app version and language. Every field is a suggestion with a confidence level; the commuter reviews and
@@ -10,6 +11,15 @@ import { findModelInText, type CatalogEntry } from "@/lib/transport/catalog";
  */
 export type RideProvider = "ola" | "uber" | "rapido";
 export const PROVIDER_LABEL: Record<RideProvider, string> = { ola: "Ola", uber: "Uber", rapido: "Rapido" };
+
+/** Whether the receipt points to an electric vehicle. A hint only: receipts rarely say what fuel the car really runs on. */
+export interface EvFlag {
+  flagged: boolean;
+  /** "model-list": the model matched an electric entry in the catalogue. "receipt-text": the receipt says EV / electric. */
+  basis: "model-list" | "receipt-text" | null;
+  /** The model, or the words, that triggered the flag. */
+  evidence: string | null;
+}
 
 export interface ReceiptExtraction {
   provider: RideProvider | null;
@@ -19,6 +29,7 @@ export interface ReceiptExtraction {
   tripDate: string | null;
   vehicleText: string | null;
   model: { manufacturer: string; model: string; body: VehicleBody; powertrain: Powertrain; isSuv?: boolean } | null;
+  ev: EvFlag;
   /** The ride class printed on the receipt, e.g. "Prime Sedan". */
   serviceClass: string | null;
   bodyHint: "car" | "two_wheeler" | "three_wheeler" | null;
@@ -73,6 +84,16 @@ function readClass(text: string): { serviceClass: string | null; bodyHint: Recei
   return { serviceClass: m[1].replace(/\b\w/g, (x) => x.toUpperCase()), bodyHint };
 }
 
+const EV_WORDS = /\b(ev|electric|e[-\s]?scooter|e[-\s]?bike|e[-\s]?rickshaw)\b/i;
+
+/** EV hint, strongest first: an electric model from the catalogue, then EV words printed on the receipt. */
+export function flagEv(text: string, entry: CatalogEntry | null): EvFlag {
+  if (entry?.powertrain === "electric") return { flagged: true, basis: "model-list", evidence: `${entry.manufacturer} ${entry.model}` };
+  const hit = text.match(EV_WORDS);
+  if (hit) return { flagged: true, basis: "receipt-text", evidence: hit[0] };
+  return { flagged: false, basis: null, evidence: null };
+}
+
 const clip = (s: string) => s.replace(/\s+/g, " ").trim().slice(0, 60);
 
 function readPlace(lines: string[], keys: RegExp): string | null {
@@ -110,6 +131,8 @@ export function parseReceipt(lines: string[], catalog?: readonly CatalogEntry[])
   const vehicleConfidence: Confidence = entry ? "medium" : "low";
   if (!entry) notes.push("The car model wasn't recognised from the receipt text; choose it manually.");
   else notes.push(`“${entry.manufacturer} ${entry.model}” matched the model list. The list can't tell you the fuel of the actual car, so confirm it.`);
+  const ev = flagEv(text, entry);
+  if (ev.flagged) notes.push(`EV flagged (${ev.basis === "model-list" ? "model list" : "receipt text"}): “${ev.evidence}”. Receipts rarely prove the fuel, so confirm it below.`);
 
   return {
     provider,
@@ -118,6 +141,7 @@ export function parseReceipt(lines: string[], catalog?: readonly CatalogEntry[])
     tripDate: date,
     vehicleText: vehicleLine ? clip(vehicleLine.replace(/.*?[:\-–]\s*/, "")) : null,
     model,
+    ev,
     serviceClass: cls.serviceClass,
     bodyHint: cls.bodyHint,
     pickup: readPlace(clean, /^(pick[\s-]?up|from)\b/i),

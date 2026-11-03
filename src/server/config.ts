@@ -5,10 +5,9 @@ import { PORTAL_V3 } from "@/lib/chain";
  * Server-side configuration. Everything secret lives here and is read from server-only environment variables:
  * none of these names starts with NEXT_PUBLIC_, so none can reach the browser bundle.
  *
- *   ORACLE_PRIVATE_KEY            0x… signing key of the address the contract was deployed with (azureOracleSigner)
+ *   ORACLE_PRIVATE_KEY            0x… signing key of the contract's oracle signer (the address the contract was deployed with)
  *   MISSIONEV_CONTRACT_ADDRESS    deployed MissionEV address (falls back to NEXT_PUBLIC_MEV_CONTRACT_ADDRESS, which is public anyway)
  *   PORTAL_RPC_URL                JSON-RPC endpoint for nonce and state reads (falls back to NEXT_PUBLIC_PORTAL_RPC_URL)
- *   AZURE_VISION_ENDPOINT / AZURE_VISION_KEY   Azure AI Vision resource used for receipt OCR
  *   ORACLE_SIGNATURE_TTL_SECONDS  how long a signature stays valid (default 600)
  *   ORACLE_MAX_TRIPS_PER_DAY      signatures per commuter per UTC day (default 8)
  */
@@ -19,7 +18,6 @@ export interface ServerConfig {
   oracleKey: Hex | null;
   signatureTtlSeconds: number;
   maxTripsPerDay: number;
-  vision: { endpoint: string; key: string } | null;
 }
 
 const isAddress = (s: string | undefined): s is Hex => Boolean(s && /^0x[0-9a-fA-F]{40}$/.test(s));
@@ -36,7 +34,6 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     oracleKey: isKey(env.ORACLE_PRIVATE_KEY) ? env.ORACLE_PRIVATE_KEY : null,
     signatureTtlSeconds: Math.min(3600, posInt(env.ORACLE_SIGNATURE_TTL_SECONDS, 600)),
     maxTripsPerDay: posInt(env.ORACLE_MAX_TRIPS_PER_DAY, 8),
-    vision: env.AZURE_VISION_ENDPOINT && env.AZURE_VISION_KEY ? { endpoint: env.AZURE_VISION_ENDPOINT.replace(/\/+$/, ""), key: env.AZURE_VISION_KEY } : null,
   };
 }
 
@@ -47,7 +44,8 @@ export interface IntegrationStatus {
   contract: { configured: boolean; address: string | null };
   rpc: { configured: boolean };
   oracle: { configured: boolean };
-  ocr: { configured: boolean; provider: "azure-ai-vision" };
+  /** Receipt OCR needs no server settings: Tesseract.js runs in the browser and the image never reaches the server. */
+  ocr: { engine: "tesseract.js"; runsIn: "browser" };
   otp: { delivery: "demo"; note: string };
   missing: string[];
 }
@@ -64,7 +62,7 @@ export function integrationStatus(cfg: ServerConfig): IntegrationStatus {
     contract: { configured: Boolean(cfg.contract), address: cfg.contract },
     rpc: { configured: Boolean(cfg.rpcUrl) },
     oracle: { configured: Boolean(cfg.oracleKey) },
-    ocr: { configured: Boolean(cfg.vision), provider: "azure-ai-vision" },
+    ocr: { engine: "tesseract.js", runsIn: "browser" },
     otp: { delivery: "demo", note: "No SMS provider is configured. The OTP is a fixed demo value and no message is sent." },
     missing,
   };

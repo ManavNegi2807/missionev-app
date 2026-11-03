@@ -14,7 +14,7 @@ Licences were read from the installed packages (`node_modules/<name>/package.jso
 | recharts | 3.10.1 | MIT | Analytics charts |
 | lucide-react | 1.65.0 | ISC | Icons |
 | leaflet | 1.9.4 | BSD-2-Clause | Keyless OpenStreetMap basemap |
-| azure-maps-control | 3.7.4 | "See LICENSE.TXT" (Microsoft terms) | Optional Azure Maps basemap, only loaded if `NEXT_PUBLIC_AZURE_MAPS_KEY` is set |
+| tesseract.js | 7.0.0 | Apache-2.0 | Receipt OCR, run in the browser (the image never reaches this app's server) |
 
 ## npm packages (development and test only)
 
@@ -54,8 +54,7 @@ Details and caveats: [`docs/INTEGRATION_REPORT.md`](docs/INTEGRATION_REPORT.md).
 | OpenStreetMap tiles (`tile.openstreetmap.org`) | ODbL data, [tile usage policy](https://operations.osmfoundation.org/policies/tiles/); fine for a demo, not for heavy traffic | Default basemap, no key |
 | OpenRailwayMap tiles | CC-BY-SA | Metro overlay on OSM |
 | Google Maps JavaScript API | Google terms; needs a key | Only if `NEXT_PUBLIC_GOOGLE_MAPS_KEY` is set |
-| Azure Maps | Microsoft terms; needs a key | Only if `NEXT_PUBLIC_AZURE_MAPS_KEY` is set |
-| Azure AI Vision (Image Analysis 4.0, Read) | Microsoft terms; needs a key | Only if `AZURE_VISION_ENDPOINT` and `AZURE_VISION_KEY` are set; the code path has not been run against the real service |
+| jsDelivr CDN (`cdn.jsdelivr.net`) | Public CDN | The first receipt scan downloads Tesseract's worker, WebAssembly core and English language data from here (open-source files, Apache-2.0). Only those files are requested; the receipt is not sent anywhere |
 | Portal V3 EVM RPC `https://test-evm-rpc-v3.portaldot.dev` | Portaldot testnet | Oracle nonce/state reads and contract deployment |
 | Community indexer `portalindex-98f0.onrender.com` | Shared in the Portaldot Discord | Used by hand to confirm deployments; the app does not depend on it |
 

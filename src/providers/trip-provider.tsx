@@ -565,7 +565,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     }
 
     // 2 — the oracle re-verifies the evidence, recalculates, and signs only what it derived.
-    const res = await postJson<{ status: string; reason?: string; signed?: SignedTrip }>("/api/oracle/sign-trip", {
+    const res = await postJson<{ status: string; reason?: string; signed?: SignedTrip }>("/api/sign-trip", {
       commuter: address,
       proof: { message, signature },
       trip: {

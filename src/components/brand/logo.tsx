@@ -23,7 +23,7 @@ export function Wordmark({ compact }: { compact?: boolean }) {
   return (
     <div className="min-w-0 leading-none">
       <p className="text-[15px] font-semibold tracking-[0.18em] text-fg">MISSIONEV</p>
-      <p className="mt-1.5 truncate font-mono text-[10.5px] tracking-[0.12em] text-muted">CARBONCOIN PROTOCOL</p>
+      <p className="mt-1.5 truncate font-mono text-[10.5px] tracking-[0.12em] text-muted">CARBON REWARDS</p>
     </div>
   );
 }

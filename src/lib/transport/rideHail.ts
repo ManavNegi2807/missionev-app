@@ -47,7 +47,7 @@ export function rideFromExtraction(x: ReceiptExtraction, prev: RideHailForm = EM
     model: x.model?.model ?? prev.model,
     body: x.model?.body ?? (x.bodyHint === "two_wheeler" ? "two_wheeler" : x.bodyHint === "car" ? "car" : prev.body),
     // The model list says what fuel a catalogued variant has, not what the cab runs on: pre-filled, never trusted.
-    fuel: x.model?.powertrain ?? prev.fuel,
+    fuel: x.model?.powertrain ?? (x.ev.flagged ? "electric" : prev.fuel),
     isSuv: x.model?.isSuv ?? prev.isSuv,
     source: "ocr-reviewed",
     ocrConfidence: { provider: x.confidence.provider, distance: x.confidence.distance, vehicle: x.confidence.vehicle },

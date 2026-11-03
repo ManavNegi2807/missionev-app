@@ -2,7 +2,7 @@
 
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { bearingDeg, boundsOf, type LatLng } from "@/lib/trip/geo";
-import type { MapHandle } from "@/lib/maps/azure";
+import type { MapHandle } from "@/lib/maps/types";
 import type { MapViewProps } from "./types";
 
 const W = 1000;

@@ -85,8 +85,8 @@ export function DataSources({ ds, refreshedAt }: { ds: AnalyticsDataset; refresh
   ];
 
   const offline: Array<{ name: string; icon: React.ReactNode; text: string }> = [
-    { name: "Azure Cosmos DB", icon: <Database className="size-4" />, text: "No analytics store is configured. Nothing is read from or written to Cosmos DB." },
-    { name: "Power BI / enterprise reporting", icon: <FileSpreadsheet className="size-4" />, text: "No workspace connected. Use the CSV / HTML demo export instead." },
+    { name: "Analytics database", icon: <Database className="size-4" />, text: "No analytics store is configured. Nothing is read from or written to a database." },
+    { name: "BI / enterprise reporting", icon: <FileSpreadsheet className="size-4" />, text: "No workspace connected. Use the CSV / HTML demo export instead." },
   ];
 
   return (

@@ -317,7 +317,7 @@ export function LedgerPanel() {
         )}
 
         <p className="text-xs leading-relaxed text-muted">
-          How it works: the oracle (an Azure service) signs the trip; <strong className="text-fg">your wallet</strong> sends it, because the contract credits <span className="font-mono">msg.sender</span>. A DEMO result is never labelled as an on-chain transaction.
+          How it works: the verifier node (the contract&apos;s oracle signer) signs the trip; <strong className="text-fg">your wallet</strong> sends it, because the contract credits <span className="font-mono">msg.sender</span>. A DEMO result is never labelled as an on-chain transaction.
         </p>
       </div>
     </Panel>

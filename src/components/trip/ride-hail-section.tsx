@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, FileText, Loader2, ScanText, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Loader2, ScanText, Upload, Zap } from "lucide-react";
 import { SelectField, TextField } from "@/components/ui/fields";
 import { Alert, Badge, Button } from "@/components/ui/primitives";
-import { useIntegrationStatus } from "@/lib/api/client";
 import { cn } from "@/lib/format";
 import type { ReceiptExtraction } from "@/lib/ocr/receipt";
+import { scanReceipt } from "@/lib/ocr/scan";
 import { rideFromExtraction, resolveRideHail, type RideHailForm } from "@/lib/transport/rideHail";
 import { useTrip } from "@/providers/trip-provider";
 
-type Ocr = { phase: "idle" } | { phase: "reading" } | { phase: "done"; extraction: ReceiptExtraction } | { phase: "error"; reason: string; unconfigured?: boolean };
+type Ocr = { phase: "idle" } | { phase: "reading" } | { phase: "done"; extraction: ReceiptExtraction } | { phase: "error"; reason: string };
 
 const FUELS = { Petrol: "petrol", Diesel: "diesel", CNG: "cng", Electric: "electric" } as const;
 const BODIES = { Car: "car", "Two-wheeler": "two_wheeler" } as const;
@@ -21,9 +21,9 @@ const confTone = { high: "ok", medium: "cyan", low: "warn" } as const;
 
 export function RideHailSection({ disabled }: { disabled: boolean }) {
   const { setup, setRide, selection } = useTrip();
-  const { status } = useIntegrationStatus();
   const f = setup.ride;
   const [ocr, setOcr] = useState<Ocr>({ phase: "idle" });
+  const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const urlRef = useRef<string | null>(null);
@@ -37,25 +37,24 @@ export function RideHailSection({ disabled }: { disabled: boolean }) {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     urlRef.current = URL.createObjectURL(file);
     setPreview(urlRef.current);
-    if (!status?.ocr.configured) {
-      setOcr({ phase: "error", unconfigured: true, reason: "Receipt reading (Azure AI Vision) isn't configured on this server, so nothing was read from the image. Enter the ride details by hand below." });
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 8 * 1024 * 1024) {
+      setOcr({ phase: "error", reason: "Use a PNG, JPEG or WebP screenshot under 8 MB, or enter the ride details by hand." });
       return;
     }
     setOcr({ phase: "reading" });
+    setProgress(0);
     try {
-      const body = new FormData();
-      body.append("image", file);
-      const r = await fetch("/api/vision/ocr", { method: "POST", body });
-      const data = (await r.json().catch(() => ({}))) as { status?: string; reason?: string; extraction?: ReceiptExtraction };
-      if (!r.ok || !data.extraction) {
-        setOcr({ phase: "error", reason: data.reason ?? "The receipt couldn't be read.", unconfigured: r.status === 501 });
+      // Runs in this browser tab: the screenshot is never uploaded to the app's server.
+      const scan = await scanReceipt(file, (p) => p.status === "recognizing text" && setProgress(p.progress));
+      if (scan.lines.length === 0) {
+        setOcr({ phase: "error", reason: "No text was found in the image. Try a sharper, full-screen screenshot or enter the details by hand." });
         return;
       }
-      setOcr({ phase: "done", extraction: data.extraction });
-      const next = rideFromExtraction(data.extraction, f);
+      setOcr({ phase: "done", extraction: scan.extraction });
+      const next = rideFromExtraction(scan.extraction, f);
       setRide({ ...next, occupants: f.occupants });
     } catch {
-      setOcr({ phase: "error", reason: "The upload failed. Check your connection or enter the details by hand." });
+      setOcr({ phase: "error", reason: "The receipt couldn't be read. The OCR engine loads from a public CDN the first time, so it needs a connection. Enter the ride details by hand below." });
     }
   };
 
@@ -75,10 +74,10 @@ export function RideHailSection({ disabled }: { disabled: boolean }) {
       <div className="flex flex-wrap items-center gap-2">
         <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" aria-label="Ride receipt screenshot" disabled={disabled} onChange={(e) => void onFile(e.target.files?.[0] ?? null)} />
         <Button size="sm" variant="secondary" disabled={disabled} icon={ocr.phase === "reading" ? <Loader2 aria-hidden className="size-3.5 animate-spin" /> : <Upload aria-hidden className="size-3.5" />} onClick={() => fileRef.current?.click()}>
-          {ocr.phase === "reading" ? "Reading receipt…" : preview ? "Replace screenshot" : "Upload receipt screenshot"}
+          {ocr.phase === "reading" ? `Reading receipt… ${Math.round(progress * 100)}%` : preview ? "Replace screenshot" : "Upload receipt screenshot"}
         </Button>
-        <Badge tone={status?.ocr.configured ? "ok" : "warn"} dot>
-          {status?.ocr.configured ? "Azure AI Vision · live" : "OCR not configured · manual entry"}
+        <Badge tone="ok" dot>
+          Tesseract.js · runs in your browser
         </Badge>
       </div>
 
@@ -87,7 +86,7 @@ export function RideHailSection({ disabled }: { disabled: boolean }) {
         <img src={preview} alt="Preview of the receipt screenshot you selected" className="max-h-56 w-auto max-w-full rounded-lg border border-line object-contain" />
       )}
       {ocr.phase === "error" && (
-        <Alert tone={ocr.unconfigured ? "neutral" : "warn"} role="status" icon={<AlertTriangle aria-hidden className="size-4" />} title={ocr.unconfigured ? "Reading is off" : "Couldn't read the receipt"}>
+        <Alert tone="warn" role="status" icon={<AlertTriangle aria-hidden className="size-4" />} title="Couldn't read the receipt">
           {ocr.reason}
         </Alert>
       )}
@@ -99,6 +98,14 @@ export function RideHailSection({ disabled }: { disabled: boolean }) {
             </span>
           ))}
           {ocr.extraction.pickup || ocr.extraction.drop ? <span className="mt-1 block">Pick-up and drop labels were seen but are not stored.</span> : null}
+          {ocr.extraction.ev.flagged && (
+            <span className="mt-1.5 block">
+              <Badge tone="ok" dot>
+                <Zap aria-hidden className="mr-1 inline size-3" />
+                EV flagged · {ocr.extraction.ev.evidence}
+              </Badge>
+            </span>
+          )}
         </Alert>
       )}
 

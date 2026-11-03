@@ -1,5 +1,5 @@
 import type { LatLng } from "@/lib/trip/geo";
-import type { MapHandle } from "./azure";
+import type { MapHandle } from "./types";
 
 /**
  * Google Maps adapter (Maps JavaScript API). The map is created ONLY when NEXT_PUBLIC_GOOGLE_MAPS_KEY is set.

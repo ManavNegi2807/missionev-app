@@ -5,8 +5,10 @@ import { getRuntime } from "@/server/runtime";
 const allow = createLimiter(20, 60_000);
 
 /**
- * POST /api/oracle/sign-trip — the trusted oracle. Authenticates the request with a wallet signature, re-verifies the trip,
- * recalculates the emissions itself and signs only what it derived. The oracle private key never leaves this process.
+ * POST /api/sign-trip — the verifier node (the contract's oracle signer). Authenticates the request with a wallet
+ * signature, re-verifies the trip, calculates the CO2 avoided itself and signs, as EIP-712 typed data for Portal V3
+ * (chain 420420777), only what it derived. The signing key never leaves this process; the contract address and the
+ * expected signer come from server configuration, never from the request.
  */
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";

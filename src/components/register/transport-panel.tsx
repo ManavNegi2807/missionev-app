@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { Bike, Bus, Car, CarTaxiFront, CircleHelp, Footprints, Pencil, Plus, Save, Trash2, TrainFront, Zap } from "lucide-react";
 import { SelectField, TextField } from "@/components/ui/fields";
 import { Alert, Badge, Button, Panel, PanelHeader } from "@/components/ui/primitives";
-import { useIntegrationStatus } from "@/lib/api/client";
 import { cn } from "@/lib/format";
 import {
   EMPTY_DRAFT,
@@ -55,7 +54,6 @@ export function TransportPanel({
   onSave: (profile: TransportProfile) => void;
 }) {
   const locked = !account;
-  const { status } = useIntegrationStatus();
   /** Edits are layered over the saved profile: null means "show what is saved". */
   const [edit, setEdit] = useState<TransportProfile | null>(null);
   const [draft, setDraft] = useState<VehicleDraft | null>(null);
@@ -226,9 +224,7 @@ export function TransportPanel({
           {selected.has("ride_hail") && (
             <Alert tone="cyan" title="Ola / Uber / Rapido">
               Nothing to set up here. For each ride you&apos;ll upload the receipt on Capture Trip; the vehicle that carried you decides the result.{" "}
-              {status?.ocr.configured
-                ? "Receipt reading (Azure AI Vision) is configured on this server."
-                : "Receipt reading (Azure AI Vision) isn't configured on this server, so you'll enter the receipt details by hand. Nothing is read automatically."}
+              The receipt is read in your browser with Tesseract.js, so the image never leaves your device. You review and confirm what it finds.
             </Alert>
           )}
 

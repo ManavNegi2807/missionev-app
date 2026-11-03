@@ -61,11 +61,10 @@ npm run dev        # http://localhost:3000
 |---|---|---|
 | `MISSIONEV_CONTRACT_ADDRESS` | server | `0x0904244017324dc1bf7c611fe1236936ee65fc82` |
 | `PORTAL_RPC_URL` | server | `https://test-evm-rpc-v3.portaldot.dev` |
-| `ORACLE_PRIVATE_KEY` | **server only, never `NEXT_PUBLIC_`** | the key whose address is the contract's `azureOracleSigner` |
+| `ORACLE_PRIVATE_KEY` | **server only, never `NEXT_PUBLIC_`** | the key whose address is the contract's oracle signer (`0x2aD67FaC8dB8fF3255bA650639049020420160De`) |
 | `NEXT_PUBLIC_MEV_CONTRACT_ADDRESS`, `NEXT_PUBLIC_PORTAL_RPC_URL` | public | the same address and URL, so the browser can offer to add the network |
-| `AZURE_VISION_ENDPOINT`, `AZURE_VISION_KEY` | server only, optional | receipt OCR |
 | `ORACLE_SIGNATURE_TTL_SECONDS`, `ORACLE_MAX_TRIPS_PER_DAY` | server only, optional | tuning |
-| `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_AZURE_MAPS_KEY` | public, optional | map keys; restrict them by domain |
+| `NEXT_PUBLIC_GOOGLE_MAPS_KEY` | public, optional | overrides the default Leaflet and OpenStreetMap map; restrict the key by domain |
 
 `.env.example` lists every name with no values. Then open `/api/status`: it shows `LIVE` once all three server settings are present, and
 never prints a secret. A LIVE journey also needs real GPS and a real wallet on chain 420420777 holding a little tPOT for gas.

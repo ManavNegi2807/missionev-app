@@ -239,7 +239,7 @@ export function checkMotion(ctx: VerifyContext): CheckResult {
   };
 }
 
-/* ---------------- 3.4 Route validation (Azure Maps — routing NOT integrated) ---------------- */
+/* ---------------- 3.4 Route validation (local geometry only — a road-routing service is NOT integrated) ---------------- */
 export function checkRoute(ctx: VerifyContext): CheckResult {
   const s = ctx.samples;
   const first: LatLng | undefined = s[0];
@@ -289,7 +289,7 @@ export function checkRoute(ctx: VerifyContext): CheckResult {
     items.push({
       label: "Route consistency",
       ok: null,
-      detail: "No planned route — Azure Maps routing isn't configured, so road-following wasn't checked.",
+      detail: "No planned route — no road-routing service is integrated, so road-following wasn't checked.",
     });
     items.push({
       label: "Calculated distance comparison",
@@ -312,11 +312,11 @@ export function checkRoute(ctx: VerifyContext): CheckResult {
       status === "fail"
         ? "The captured path disagrees with the expected route."
         : ctx.route
-          ? "Path follows the planned demo route (local geometry; Azure Maps routing not called)."
-          : "Basic geometry looks sane. Road-following needs Azure Maps routing, which isn't integrated.",
+          ? "Path follows the planned demo route (local geometry; no routing service called)."
+          : "Basic geometry looks sane. Road-following needs a routing service, which isn't integrated.",
     items,
     technical: {
-      engine: "local geometry (not Azure Maps routing)",
+      engine: "local geometry (no routing service)",
       maxDeviationM: Math.round(maxDevM),
       straightLineKm: Number(straightKm.toFixed(3)),
     },

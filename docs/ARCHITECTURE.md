@@ -7,16 +7,18 @@ the **MissionEV contract** on Portal V3. The browser never holds a signing key f
 flowchart LR
   subgraph Browser["Browser: Next.js 16 / React 19"]
     direction TB
-    UI["4 screens<br/>Register, Capture trip,<br/>Rewards, Analytics"]
+    UI["4 screens<br/>Register, Capture trip,<br/>Rewards, Analytics<br/>(Leaflet + OpenStreetMap map)"]
     ENG["Carbon engine<br/>src/lib/carbon"]
+    OCR["Receipt OCR<br/>Tesseract.js, in the browser"]
     WAL["Wallet provider<br/>EIP-1193, MetaMask"]
     UI --> ENG
+    UI --> OCR
     UI --> WAL
   end
   subgraph Server["Server: Next route handlers"]
     direction TB
-    ORA["Oracle<br/>/api/oracle/sign-trip<br/>re-verify, recalculate,<br/>sign EIP-712"]
-    API["Other routes<br/>trips calculate and verify,<br/>commuter, rewards, status,<br/>OTP demo, OCR optional"]
+    ORA["Verifier node<br/>/api/sign-trip<br/>re-verify, calculate CO2,<br/>sign EIP-712"]
+    API["Other routes<br/>trips calculate and verify,<br/>commuter, rewards, status,<br/>OTP demo"]
   end
   subgraph Chain["Portal V3 testnet, chain 420420777"]
     SC["MissionEVv2 contract<br/>$MEV, streaks, carbon score"]
@@ -47,7 +49,7 @@ sequenceDiagram
   W-->>B: proof
   B->>O: trip evidence and proof
   O->>O: verify proof, recompute distance and carbon, apply reward policy
-  O->>R: read nonce, processedTrips, azureOracleSigner
+  O->>R: read nonce, processedTrips, oracle signer
   O-->>B: EIP-712 signature over exactly what the oracle derived
   B->>W: send recordCommute(tripId, mode, distance, co2, deadline, sig)
   W->>M: transaction from the commuter
@@ -61,17 +63,18 @@ sequenceDiagram
 | Who | Can do | Cannot do |
 |---|---|---|
 | Commuter's browser | Capture a trip, run the carbon engine, ask for a signature, submit the transaction with their own wallet | Choose the numbers that get signed: the oracle recomputes them |
-| Oracle (server) | Sign a `TripPayload` it derived itself, only for a commuter who proved wallet ownership | Submit a transaction (the contract credits `msg.sender`), or sign for a key other than the contract's `azureOracleSigner` |
+| Oracle (server) | Sign a `TripPayload` it derived itself, only for a commuter who proved wallet ownership | Submit a transaction (the contract credits `msg.sender`), or sign with a key other than the contract's oracle signer |
 | Contract | Verify the signature, block replays and expired signatures, mint, keep streak and score | Check that the journey really happened: it trusts the oracle |
-| Owner (deployer) | Replace the oracle with `setAzureOracle` | Mint directly, pause, or change balances |
+| Owner (deployer) | Replace the oracle signer (an owner-only function) | Mint directly, pause, or change balances |
 
 What the oracle checks before it signs is listed in [`FLOW.md`](FLOW.md) and implemented in `src/server/signService.ts`.
 
-## Where the "Azure Functions" layer lives
+## Where the verifier node lives
 
-The design calls for an Azure-style oracle service. Here it is implemented as Next.js route handlers (`src/app/api/**`), which are plain
-`Request` to `Response` functions with the logic in `src/server/*` and `src/lib/*`. Moving them to Azure Functions would need only a thin
-wrapper. No Azure Function, Cosmos DB, Azure Maps routing or Power BI is deployed or called; Azure AI Vision is used only if configured.
+The verifier node (the oracle signer) is a set of Next.js route handlers (`src/app/api/**`): plain `Request` to `Response` functions with the
+logic in `src/server/*` and `src/lib/*`, so it runs on any Node host. The whole stack is open source: the map is Leaflet on OpenStreetMap
+tiles, receipt OCR is Tesseract.js running in the browser, and the carbon engine and signing are plain TypeScript with viem. No hosted
+function platform, managed database or paid OCR, maps or routing service is called.
 
 ## Code map
 
@@ -88,5 +91,5 @@ wrapper. No Azure Function, Cosmos DB, Azure Maps routing or Power BI is deploye
 
 ## Known architectural limits
 
-The oracle's rate limit and duplicate memory live in process memory, so they reset on restart and are per instance (on a serverless host
+The verifier node's rate limit and duplicate memory live in process memory, so they reset on restart and are per instance (on a serverless host
 each instance has its own). The on-chain `processedTrips` flag is the durable duplicate guard. A durable store is the obvious next step.
