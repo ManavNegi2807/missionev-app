@@ -7,6 +7,8 @@
 | Contract | `MissionEVv2` ([source](../contracts/proposed/MissionEVv2.sol)) |
 | Network | Portal V3 testnet, chain id `420420777` |
 | EVM RPC | `https://test-evm-rpc-v3.portaldot.dev` |
+| Native node | `wss://test-node-v3.portaldot.dev` |
+| Explorer | [Portaldot node console](https://node-console.portaldot.dev/) |
 | Address | `0x0904244017324dc1bf7c611fe1236936ee65fc82` |
 | Transaction | `0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d9ca965` |
 | Block / time | 309126, 2026-11-03 17:41 UTC |
@@ -16,6 +18,17 @@
 | Proof | [indexer record](https://portalindex-98f0.onrender.com/evm_transactions?tx_hash=eq.0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d9ca965) · [`contracts/deployments/420420777-MissionEVv2.json`](../contracts/deployments/420420777-MissionEVv2.json) |
 
 The owner and oracle are two different, freshly generated keys. Neither key is in the repository.
+
+## Check the network first
+
+```bash
+npm run network:health
+```
+
+Read-only. It asks the EVM endpoint and the native node (over WebSocket, plain JSON-RPC, no client library) for their newest blocks and
+compares them: chain id, how old the EVM head is, how far the EVM endpoint trails the native node, finality lag, peers and sync state. The
+exit code is 0 when healthy, 1 when degraded and 2 when unhealthy, so a script can refuse to deploy or send. The rules live in
+[`scripts/health-core.mjs`](../scripts/health-core.mjs) and are unit-tested, including the frozen-endpoint case below.
 
 ## How it was deployed
 
@@ -90,7 +103,8 @@ Observed while deploying this contract (3 November 2026):
   transaction count stayed 0), so do not trust either reading: check the chain (`eth_getCode`, the wallet's nonce, the indexer) before and after.
 * **The public RPC can fall behind.** We saw it frozen on 31 October and 1 November (last block 265334, 11:01 UTC on 1 November) and healthy
   again by 3 November. A node that is not following the chain reports stale balances and nonces, so the deploy script refuses to send when
-  the newest block is more than five minutes old.
+  the newest block is more than five minutes old, and `npm run network:health` compares the EVM endpoint with the native node to catch
+  exactly this.
 * **Node error codes seen by others:** `1010 invalid transaction` and `1012 transaction is temporarily banned`. Our reading, not documented
   by Portal: 1010 is a transaction the pool rejects (for example a fee the wallet cannot cover), and 1012 means that exact transaction was
   rejected recently, so resending it unchanged does not help.

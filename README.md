@@ -22,6 +22,19 @@ commuter's own wallet submits. Built for the Portaldot Hacker House 2026.
 | Not yet | A hosted demo link, and a first `recordCommute` transaction sent from the web app to the deployed contract |
 | Honesty | Sign-in uses a demo OTP, redemptions are simulated, community analytics are synthetic. See [real versus simulated](docs/INTEGRATION_REPORT.md) |
 
+## For judges: the evidence, by criterion
+
+**Track: Ecosystem DApps** (a consumer-facing application on Portal V3).
+
+| Criterion (weight) | Where to look |
+|---|---|
+| Technical feasibility (30%) | [Verified testnet deployment](#deployed-on-portal-v3-testnet) with a read-only `npm run contract:verify`; an oracle that recomputes everything before it signs ([`docs/BACKEND.md`](docs/BACKEND.md)); 100+ tests that run the compiled contract in an EVM; CI on every push; a commit history from 30 October ([`git log`](https://github.com/ManavNegi2807/missionev-app/commits/master)) |
+| Innovation (30%) | Rewarding the *journey*, not the vehicle; a commuter-submitted EIP-712 flow on Portal V3's EVM layer ([`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/FLOW.md`](docs/FLOW.md)); an open-source stack end to end (Leaflet and OpenStreetMap, in-browser Tesseract.js OCR) |
+| Ecosystem contribution (20%) | MIT-licensed; reusable Portal V3 tooling: a dry-run deploy script, an immutable-aware contract verifier, and `npm run network:health`, which cross-checks the EVM endpoint against the native node (it would have caught the two-day RPC freeze we hit); [builder notes](docs/DEPLOYMENT.md#notes-for-other-builders-on-portal-v3) |
+| Business potential (20%) | [`docs/BUSINESS.md`](docs/BUSINESS.md): who pays, revenue paths to test, path to first users, risks |
+
+Everything the event asks for is mapped in [`docs/HACKATHON_CHECKLIST.md`](docs/HACKATHON_CHECKLIST.md), including what is still missing.
+
 ## Try it in 60 seconds
 
 ```bash
@@ -99,6 +112,8 @@ More: [`docs/FLOW.md`](docs/FLOW.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE
 |---|---|
 | Network | Portal V3 testnet, chain id `420420777` |
 | EVM RPC | `https://test-evm-rpc-v3.portaldot.dev` |
+| Native node | `wss://test-node-v3.portaldot.dev` |
+| Explorer | [Portaldot node console](https://node-console.portaldot.dev/) |
 | Contract | `MissionEVv2` at `0x0904244017324dc1bf7c611fe1236936ee65fc82` |
 | Deploy transaction | `0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d9ca965` (block 309126, 2026-11-03 17:41 UTC) |
 | Owner / deployer | `0x184Ef822438f5D64C9dD41F570af794b347CE84e` |
@@ -158,8 +173,8 @@ Solidity 0.8 compiled with solc-js 0.8.34, vitest with `@ethereumjs/vm`. Full li
 | `src/lib/oracle/`, `src/lib/contract/` | EIP-712 payload, wallet proof, ABI and chain constants |
 | `src/providers/`, `src/components/` | App state and UI |
 | `contracts/` | `MissionEV.sol` (as supplied), `proposed/MissionEVv2.sol` (deployed), compiled artifacts, deployment record |
-| `scripts/` | `compile-contract`, `deploy-contract`, `verify-deployment`, `dev-chain` |
-| `tests/` | 100+ vitest tests: carbon, contract, oracle, transport, routes, receipt OCR |
+| `scripts/` | `compile-contract`, `deploy-contract`, `verify-deployment`, `network-health`, `dev-chain` |
+| `tests/` | 100+ vitest tests: carbon, contract, oracle, transport, routes, receipt OCR, network health |
 | `docs/` | Architecture, flow, frontend, backend, contract, deployment, audit, integration report, demo script, checklist |
 
 ## Environment variables

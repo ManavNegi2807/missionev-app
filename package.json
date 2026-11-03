@@ -14,7 +14,8 @@
     "contract:compile": "node scripts/compile-contract.mjs",
     "dev:chain": "node scripts/dev-chain.mjs",
     "contract:deploy": "node scripts/deploy-contract.mjs",
-    "contract:verify": "node scripts/verify-deployment.mjs"
+    "contract:verify": "node scripts/verify-deployment.mjs",
+    "network:health": "node scripts/network-health.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
