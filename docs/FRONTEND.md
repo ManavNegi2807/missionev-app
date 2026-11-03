@@ -1,6 +1,12 @@
 # Frontend
 
-Next.js 16 (App Router, Cache Components), React 19, Tailwind v4, recharts. `/` redirects to `/register`.
+Next.js 16 (App Router, Cache Components), React 19, Tailwind v4, recharts. `/` is a public landing page; the four app screens sit behind it.
+
+## The landing page
+
+`/` explains MissionEV before anyone signs in, and is built to be felt, not just read: a canvas network that leans toward the cursor and ripples on click, a cursor-lit grid and spotlight, a trip card that tilts toward the mouse with floating chips at different parallax depths, a magnetic main button, and cards whose border glows where the cursor is. Its "Try the maths" widget runs the app's real emissions engine and reward formula (`src/lib/landing/sample.ts`, unit-tested) over sample journeys. The main button leads to the sign-in screen, where **Connect MetaMask** is the main action, or to the dashboard when the visitor is already signed in.
+
+All pointer effects are driven by CSS variables written outside React (no re-render per mouse move), switch off on touch screens and under `prefers-reduced-motion`, pause when off screen, and use the theme tokens, so light and dark both work. Code: `src/components/landing/`.
 
 ## The four screens
 

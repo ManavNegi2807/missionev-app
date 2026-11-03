@@ -38,7 +38,7 @@ Pitch deck: [`docs/pitch/MissionEV-pitch-deck.pdf`](docs/pitch/MissionEV-pitch-d
 
 ## Try it in 60 seconds
 
-**No install:** open **https://missionev.vercel.app** and follow the steps below. It is the same app, hosted in DEMO mode: every simulated
+**No install:** open **https://missionev.vercel.app** (it opens on a landing page that explains the idea; press **Launch the app**) and follow the steps below. It is the same app, hosted in DEMO mode: every simulated
 result is labelled and nothing on that site holds a key. To run it yourself:
 
 ```bash
@@ -48,7 +48,7 @@ npm ci
 npm run dev        # http://localhost:3000, DEMO mode, no keys needed
 ```
 
-Then: press **Connect MetaMask**. Your wallet address is your account, and MetaMask offers to add Portal V3 if it is missing. No wallet?
+On the next screen press **Connect MetaMask**. Your wallet address is your account, and MetaMask offers to add Portal V3 if it is missing. No wallet?
 Press **Explore with a demo account**: everything is then simulated and labelled. Choose how you usually commute and save. Open
 **Capture trip**, pick **Metro**, choose **Simulated**, press **Start trip**, then **Verify trip**. You get the verification checks, the
 carbon comparison with its formula and sources, and an illustrative $MEV preview. The credit button is labelled "not on-chain".
@@ -170,6 +170,7 @@ Solidity 0.8 compiled with solc-js 0.8.34, vitest with `@ethereumjs/vm`. Full li
 
 | Path | Contents |
 |---|---|
+| `src/app/page.tsx`, `src/components/landing/` | The public landing page at `/` (interactive hero, real-engine calculator) |
 | `src/app/(app)/` | The four screens: register, capture-trip, rewards, analytics |
 | `src/app/api/` | Route handlers: oracle, trip calculate and verify, OCR, status, read-only chain reads |
 | `src/server/` | Oracle logic: config, signing service, chain reader, rate limiting |

@@ -1,0 +1,306 @@
+/*
+ * MissionEV landing page. Every colour comes from the theme tokens in globals.css, so light and dark both work.
+ * Pointer effects are driven by CSS variables that a small hook updates (no React re-render per mouse move):
+ *   --mx / --my   smoothed cursor position inside the hero, in px
+ *   --px / --py   cursor offset from the hero's centre, -1..1
+ *   --cx / --cy   cursor position inside a hovered card, in px
+ */
+
+.lp {
+  --lp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html:has(.lp) {
+  scroll-behavior: smooth;
+}
+
+/* ---------- hero: cursor-lit backdrop ---------- */
+.lp-hero {
+  --mx: 64%;
+  --my: 32%;
+  --px: 0;
+  --py: 0;
+}
+
+.lp-spot {
+  background:
+    radial-gradient(560px circle at var(--mx) var(--my), color-mix(in srgb, var(--color-lime) 18%, transparent), transparent 62%),
+    radial-gradient(1000px circle at 90% -5%, var(--glow-a), transparent 60%),
+    radial-gradient(900px circle at 0% 8%, var(--glow-b), transparent 60%);
+}
+
+.lp-grid {
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000, transparent 78%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000, transparent 78%);
+}
+
+/* The same grid, brighter, revealed only around the cursor. */
+.lp-grid-lit {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-lime) 38%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-lime) 38%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(300px circle at var(--mx) var(--my), #000, transparent 70%);
+  mask-image: radial-gradient(300px circle at var(--mx) var(--my), #000, transparent 70%);
+}
+
+/* ---------- parallax layers and the tilting card ---------- */
+.lp-layer {
+  transform: translate3d(calc(var(--px) * var(--d, 10) * 1px), calc(var(--py) * var(--d, 10) * 1px), 0);
+  transition: transform 0.5s var(--lp-ease);
+  will-change: transform;
+}
+
+.lp-tilt {
+  transform: perspective(1100px) rotateX(calc(var(--py) * -7deg)) rotateY(calc(var(--px) * 9deg));
+  transition: transform 0.4s var(--lp-ease);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.lp-glare {
+  background: radial-gradient(360px circle at calc(50% + var(--px) * 45%) calc(50% + var(--py) * 45%), rgba(255, 255, 255, 0.34), transparent 62%);
+  mix-blend-mode: soft-light;
+  opacity: 0.9;
+}
+
+/* ---------- cards that glow under the cursor ---------- */
+.lp-card {
+  position: relative;
+  isolation: isolate;
+  --cx: 50%;
+  --cy: 0%;
+  transition:
+    transform 0.35s var(--lp-ease),
+    box-shadow 0.35s var(--lp-ease);
+}
+
+.lp-card::before,
+.lp-card::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.lp-card::before {
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(340px circle at var(--cx) var(--cy), color-mix(in srgb, var(--color-lime) 15%, transparent), transparent 70%);
+}
+
+/* A one-pixel ring that lights up where the cursor is. */
+.lp-card::after {
+  inset: -1px;
+  padding: 1px;
+  background: radial-gradient(240px circle at var(--cx) var(--cy), var(--color-lime), transparent 70%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.lp-card:hover::before,
+.lp-card:hover::after,
+.lp-card:focus-within::before,
+.lp-card:focus-within::after {
+  opacity: 1;
+}
+
+.lp-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-panel), 0 18px 40px -22px color-mix(in srgb, var(--color-lime) 55%, transparent);
+}
+
+/* ---------- reveal on scroll (only armed by script, so the page is fully visible without it) ---------- */
+.lp-reveal[data-armed] {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.lp-reveal[data-armed][data-in] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.8s var(--lp-ease),
+    transform 0.8s var(--lp-ease);
+  transition-delay: var(--delay, 0ms);
+}
+
+/* ---------- ambient motion ---------- */
+@keyframes lp-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -12px;
+  }
+}
+
+.lp-float {
+  animation: lp-float 6.5s ease-in-out infinite;
+  animation-delay: var(--fd, 0s);
+}
+
+@keyframes lp-gradient {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.lp-gradient-text {
+  background-image: linear-gradient(90deg, var(--color-lime), var(--color-cyan), var(--color-lime));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: lp-gradient 9s linear infinite;
+}
+
+@keyframes lp-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.lp-marquee {
+  animation: lp-marquee 42s linear infinite;
+  width: max-content;
+}
+
+.lp-marquee-wrap:hover .lp-marquee {
+  animation-play-state: paused;
+}
+
+@keyframes lp-dot-run {
+  from {
+    left: 0;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+/* The dashed line that joins the four steps, with a spark that runs along it. */
+.lp-steps-line {
+  background: repeating-linear-gradient(90deg, var(--color-line-strong) 0 7px, transparent 7px 14px);
+  height: 2px;
+}
+
+.lp-steps-line::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 999px;
+  background: var(--color-lime);
+  box-shadow: 0 0 14px 2px color-mix(in srgb, var(--color-lime) 70%, transparent);
+  animation: lp-dot-run 5s linear infinite;
+}
+
+@keyframes lp-ping {
+  75%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.lp-ping {
+  animation: lp-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ---------- misc ---------- */
+.lp-progress {
+  transform-origin: 0 50%;
+  transform: scaleX(var(--sp, 0));
+}
+
+.lp-range {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-lime) var(--fill, 30%), var(--color-line-strong) var(--fill, 30%));
+  outline-offset: 6px;
+}
+
+.lp-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-panel);
+  border: 2px solid var(--color-lime);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-lime) 45%, transparent);
+  cursor: grab;
+  transition: transform 0.15s ease;
+}
+
+.lp-range::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+}
+
+.lp-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-panel);
+  border: 2px solid var(--color-lime);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-lime) 45%, transparent);
+  cursor: grab;
+}
+
+.lp-bar {
+  transition: width 0.55s var(--lp-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.lp) {
+    scroll-behavior: auto;
+  }
+  .lp-layer,
+  .lp-tilt {
+    transform: none;
+  }
+  .lp-reveal[data-armed] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- navigation bar ---------- */
+.lp-nav[data-scrolled="true"] {
+  background: var(--glass-bar);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-color: var(--color-line);
+}
+
+/* The dot that travels along the hero card's route. */
+@keyframes lp-run {
+  to {
+    offset-distance: 100%;
+  }
+}
+
+.lp-dot {
+  offset-rotate: 0deg;
+  animation: lp-run 5.5s linear infinite;
+}

@@ -39,7 +39,7 @@ export function Sidebar({
   return (
     <div className="flex h-full flex-col bg-bg-2">
       <div className={cn("flex h-16 shrink-0 items-center gap-3 border-b border-line", collapsed ? "justify-center px-2" : "px-5")}>
-        <Link href="/register" onClick={onNavigate} aria-label="MissionEV home" className="flex min-w-0 items-center gap-3 rounded-lg">
+        <Link href="/" onClick={onNavigate} aria-label="MissionEV home" className="flex min-w-0 items-center gap-3 rounded-lg">
           <LogoMark className="size-8 shrink-0" />
           <Wordmark compact={collapsed} />
         </Link>
