@@ -20,6 +20,7 @@ jobs:
       # No secrets are needed: the app builds in DEMO mode and the contract tests run in an in-process EVM.
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc --noEmit
+      # `next typegen` first: Next generates global types such as LayoutProps, which a fresh checkout does not have until a build.
+      - run: npm run typecheck
       - run: npm test
       - run: npm run build

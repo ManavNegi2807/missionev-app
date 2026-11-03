@@ -173,7 +173,7 @@ restrict them by domain). Use a **fresh** oracle key whose address is the contra
 
 ```bash
 npm test           # 104 tests
-npm run lint && npx tsc --noEmit && npm run build
+npm run lint && npm run typecheck && npm run build
 ```
 
 The contract tests compile the contract and execute it in an in-process EVM (`@ethereumjs/vm`), so every audit finding is demonstrated by

@@ -18,7 +18,7 @@ Next.js version differs from older ones.
 
 ```bash
 npm run lint
-npx tsc --noEmit
+npm run typecheck  # next typegen, then tsc --noEmit
 npm test           # 104 tests, including the compiled contract run in an in-process EVM
 npm run build
 ```

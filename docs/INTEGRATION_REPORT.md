@@ -101,7 +101,7 @@ nothing persists).
 * `npm test` — 104 tests, 5 files: carbon engine, contract (compiled `MissionEV` and proposed `MissionEVv2` executed in an
   in-process EVM with Portal V3's chain id), oracle decision logic against the real contract, registration/ride-hail/receipt parsing,
   route handlers and secret hygiene.
-* `npx tsc --noEmit`, `npx eslint src tests scripts` — clean. `npx next build` — passes (Next 16, Cache Components).
+* `npm run typecheck` (`next typegen`, then `tsc --noEmit`), `npx eslint src tests scripts` — clean. `npx next build` — passes (Next 16, Cache Components).
 * Browser (Microsoft Edge via playwright-core): DEMO flow (sign-in → multi-vehicle profile → metro, EV, petrol, ride-hail petrol and
   EV cab → demo credit → rewards → analytics) and LIVE flow (local chain + oracle + mock wallet → real-GPS EV trip → oracle signature
   → wallet transaction → on-chain balance equals the formula) — results in the final summary.
