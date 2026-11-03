@@ -245,7 +245,10 @@ overrides); charts and the map read the variables.
   catalogue has names only, no efficiency figures.
 * The contract has no `redeem` or `burn`, so redemptions are a labelled simulation, and community analytics data is synthetic.
 * One oracle key signs rewards, and the owner can replace it; GPS comes from the commuter's own browser and can be spoofed.
-* The web app has been driven with a mock wallet, not yet with MetaMask against the deployed contract.
+* The web app has been driven with a mock wallet, not yet with MetaMask against the deployed contract. The verifier node's signature has been
+  accepted by the deployed contract in a simulation (nothing sent), but no real `recordCommute` transaction exists yet.
+* A `recordCommute` call is estimated at about 35 tPOT on the testnet at the gas price seen on 4 November, paid by the commuter's wallet. Real
+  users would need sponsored gas, batching or a fee rebate (see [`docs/BUSINESS.md`](docs/BUSINESS.md)).
 
 ## Hackathon period and disclosure
 

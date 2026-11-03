@@ -49,6 +49,7 @@ None of these is proven. They are the order in which we would test them.
 | Emission factors are only as good as their sources | Every factor carries its source, year and confidence; the grid factor is the CEA's published figure | Operator data for metro and e-bus, and a review of the fuel factors |
 | One oracle key signs rewards | The verifier node signs only what it derived, and the owner can rotate the signer | A multi-signer or threshold design, and a pause control, before holding real value |
 | Regulation of tokens | The token has no redemption and no market | Legal review before any redemption or trading is offered |
+| Cost of a transaction | One `recordCommute` was estimated at about 35 tPOT on the testnet at the gas price seen on 4 November, and the commuter's wallet pays it | A relayer or sponsored-gas design, batching several journeys into one transaction, or the ecosystem programme's gas-fee rebates, before real users are asked to pay |
 
 ## Why Portal V3
 

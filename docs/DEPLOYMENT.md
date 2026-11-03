@@ -98,6 +98,8 @@ Observed while deploying this contract (3 November 2026):
 * **Fees are weight-based and creation is expensive.** A 3,933-byte creation by another project (block 97421) paid about 322 tPOT; this
   contract's 5,610-byte creation paid about 418 tPOT. Treat the node's estimate as the minimum the deployer should hold (the script
   refuses to send below it), and fund the deployer with the estimate plus a margin, in one wallet.
+* **Calls are expensive too.** On 4 November a single `recordCommute` was estimated at about 35 tPOT (about 1.5 quadrillion gas units at
+  23,035 wei per unit). Budget testnet tokens per transaction, not per project, and see [`BUSINESS.md`](BUSINESS.md) for what that means for users.
 * **Remix showed `_context7.t3.error.indexOf is not a function`** against this node. A Portal developer said in the Portaldot Discord that
   this is a receipt-format mismatch that can appear even when a deployment succeeds. In our case nothing had been deployed (the wallet's
   transaction count stayed 0), so do not trust either reading: check the chain (`eth_getCode`, the wallet's nonce, the indexer) before and after.
