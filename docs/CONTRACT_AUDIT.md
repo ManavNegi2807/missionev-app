@@ -4,8 +4,10 @@ Scope: `contracts/MissionEV.sol` (the source supplied for this upgrade; it was *
 added verbatim). Compiled with `solc-js 0.8.34` (pinned in `package.json`), optimizer 200 runs, `evmVersion: paris`
 (`npm run contract:compile` → `contracts/artifacts/MissionEV.json` and `src/lib/contract/missionev.abi.ts`).
 
-**Deployment status:** no deployed address, ABI or deployment record existed. Nothing was deployed, and no address was
-switched, by this work. Until `MISSIONEV_CONTRACT_ADDRESS` (+ RPC and oracle key) is configured the app runs in DEMO.
+**Deployment status:** when this audit was written no deployed address, ABI or deployment record existed. On 2026-11-03 the
+**proposed v2** (not the supplied v1) was deployed to Portal V3 testnet at `0x0904244017324dc1bf7c611fe1236936ee65fc82`
+(tx `0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d9ca965`, block 309126; record in `contracts/deployments/`). The supplied
+v1 has never been deployed. Until `MISSIONEV_CONTRACT_ADDRESS` (+ RPC and oracle key) is configured on the server the app runs in DEMO.
 
 Every finding below was **demonstrated by executing the compiled contract** (`tests/contract.test.ts`, which also runs the
 same cases against the proposed v2). Severity is my own judgement of impact on a prototype reward token.
@@ -30,7 +32,7 @@ chain with Portal V3's id 420420777); the deadline check; the replay check; out-
 the oracle refuses to sign any value that doesn't fit `uint32` (tested; the contract's own handling of an oversized value was not separately tested); a signature for commuter A cannot be used by B; changing any signed field
 invalidates the signature; a signature for a different contract address is rejected.
 
-## Proposed v2 (not deployed)
+## Proposed v2 (deployed on Portal V3 testnet on 2026-11-03)
 
 `contracts/proposed/MissionEVv2.sol` — same `recordCommute` ABI, enum numbering and EIP-712 payload, so the oracle and front end
 work unchanged. Changes: F1, F2, F3, F4, F5 (behaviour change, needs product approval), F8. It compiles and passes the same

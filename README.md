@@ -31,6 +31,33 @@ The app is **DEMO** (everything labelled, nothing on-chain) until the server has
 connected on Portal V3 (chain 420420777). Simulated trips are never signed. A DEMO result is never presented as an on-chain
 transaction. `GET /api/status` shows what is configured (never the secrets).
 
+## Deployed on Portal V3 testnet
+
+| | |
+|---|---|
+| Network | Portal V3 testnet, chain id `420420777` |
+| EVM RPC | `https://test-evm-rpc-v3.portaldot.dev` |
+| Contract | `MissionEVv2` at `0x0904244017324dc1bf7c611fe1236936ee65fc82` |
+| Deploy transaction | `0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d9ca965` (block 309126, 2026-11-03 17:41 UTC) |
+| Owner / deployer | `0x184Ef822438f5D64C9dD41F570af794b347CE84e` |
+| Oracle signer (`azureOracleSigner`) | `0x2aD67FaC8dB8fF3255bA650639049020420160De` |
+| Public proof | [indexer record of the deploy transaction](https://portalindex-98f0.onrender.com/evm_transactions?tx_hash=eq.0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d9ca965) |
+
+The deployed contract is the fixed v2 in [`contracts/proposed/MissionEVv2.sol`](contracts/proposed/MissionEVv2.sol) (see the audit for what
+changed from the supplied v1). Check it yourself, read-only:
+
+```bash
+PORTAL_RPC_URL=https://test-evm-rpc-v3.portaldot.dev npm run contract:verify -- \
+  --address 0x0904244017324dc1bf7c611fe1236936ee65fc82 \
+  --oracle 0x2aD67FaC8dB8fF3255bA650639049020420160De --owner 0x184Ef822438f5D64C9dD41F570af794b347CE84e
+```
+
+It reads the code from the chain and compares it with the compiled artifact (apart from the `DOMAIN_SEPARATOR` immutable, which the chain
+fills in), recomputes the EIP-712 domain separator for this chain and address, and checks the token name, oracle and owner.
+The deploy record is in [`contracts/deployments/`](contracts/deployments/). **Status as of this commit:** the contract is live and
+verified, but no `recordCommute` transaction has been sent to it yet, and the web app runs in DEMO until a server is given the oracle key.
+The owner can replace the oracle with `setAzureOracle`, so the owner key matters as much as the oracle key.
+
 ## How a journey becomes $MEV
 
 1. Capture the trip (real GPS, or a labelled simulation) and choose **how you travelled** for it.

@@ -6,6 +6,23 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPublicClient, getAddress, hashDomain, http } from "viem";
 
+/**
+ * The compiler leaves an `immutable` (here DOMAIN_SEPARATOR) as 32 zero bytes in the artifact; the chain fills in the real value when the
+ * contract is created. So the deployed code differs from the artifact exactly there. Write the independently recomputed value into every
+ * all-zero slot of the artifact where it appears on-chain, then require every other byte to be identical.
+ */
+function sameCode(chainCode, artifactCode, immutableValue) {
+  const onChain = chainCode.slice(2).toLowerCase();
+  const compiled = artifactCode.slice(2).toLowerCase();
+  const value = immutableValue.slice(2).toLowerCase();
+  if (onChain.length !== compiled.length) return false;
+  let patched = compiled;
+  for (let at = onChain.indexOf(value); at !== -1; at = onChain.indexOf(value, at + 2)) {
+    if (at % 2 === 0 && /^0{64}$/.test(compiled.slice(at, at + 64))) patched = patched.slice(0, at) + value + patched.slice(at + 64);
+  }
+  return patched === onChain;
+}
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const opt = (n) => (args.includes(`--${n}`) ? args[args.indexOf(`--${n}`) + 1] : undefined);
@@ -26,19 +43,26 @@ if (!/^https?:\/\//.test(rpc ?? "") || !/^0x[0-9a-fA-F]{40}$/.test(address ?? ""
   let ok = hasCode;
   if (hasCode) {
     const read = (functionName) => c.readContract({ address, abi: artifact.abi, functionName });
-    const [signer, owner, domain, name] = await Promise.all([read("azureOracleSigner"), read("owner"), read("DOMAIN_SEPARATOR"), read("name")]);
-    const expected = hashDomain({ domain: { name: "MissionEV", version: "1", chainId, verifyingContract: getAddress(address) }, types: { EIP712Domain: [{ name: "name", type: "string" }, { name: "version", type: "string" }, { name: "chainId", type: "uint256" }, { name: "verifyingContract", type: "address" }] } });
-    const rows = [
-      ["runtime code equals the artifact", code === artifact.deployedBytecode],
-      ["DOMAIN_SEPARATOR matches chain id + address", domain === expected],
-      ["token name", name === "MissionEV Carbon Reward"],
-      ...(opt("oracle") ? [["azureOracleSigner == --oracle", signer.toLowerCase() === opt("oracle").toLowerCase()]] : []),
-      ...(opt("owner") ? [["owner == --owner", owner.toLowerCase() === opt("owner").toLowerCase()]] : []),
-    ];
-    console.log(`azureOracleSigner ${signer}\nowner             ${owner}`);
-    for (const [n, pass] of rows) {
-      console.log(`${pass ? "OK  " : "FAIL"}  ${n}`);
-      ok &&= pass;
+    const fields = await Promise.all([read("azureOracleSigner"), read("owner"), read("DOMAIN_SEPARATOR"), read("name")]).catch(() => null);
+    if (!fields) {
+      // Code exists but it doesn't answer MissionEV's own getters: it is some other contract.
+      console.log("FAIL  not a MissionEV contract: azureOracleSigner/owner/DOMAIN_SEPARATOR/name could not be read");
+      ok = false;
+    } else {
+      const [signer, owner, domain, name] = fields;
+      const expected = hashDomain({ domain: { name: "MissionEV", version: "1", chainId, verifyingContract: getAddress(address) }, types: { EIP712Domain: [{ name: "name", type: "string" }, { name: "version", type: "string" }, { name: "chainId", type: "uint256" }, { name: "verifyingContract", type: "address" }] } });
+      const rows = [
+        ["runtime code equals the artifact (apart from the DOMAIN_SEPARATOR immutable)", sameCode(code, artifact.deployedBytecode, expected)],
+        ["DOMAIN_SEPARATOR matches chain id + address", domain === expected],
+        ["token name", name === "MissionEV Carbon Reward"],
+        ...(opt("oracle") ? [["azureOracleSigner == --oracle", signer.toLowerCase() === opt("oracle").toLowerCase()]] : []),
+        ...(opt("owner") ? [["owner == --owner", owner.toLowerCase() === opt("owner").toLowerCase()]] : []),
+      ];
+      console.log(`azureOracleSigner ${signer}\nowner             ${owner}`);
+      for (const [n, pass] of rows) {
+        console.log(`${pass ? "OK  " : "FAIL"}  ${n}`);
+        ok &&= pass;
+      }
     }
   }
   process.exitCode = ok ? 0 : 1;
