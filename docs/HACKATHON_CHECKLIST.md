@@ -6,6 +6,19 @@ Status as of 4 November 2026 (after the MetaMask sign-in and the landing page we
 10 Nov 16:00; winners 11 Nov. Core modules must not all be committed in the last 24 hours before the freeze, so the rule of thumb for the
 final stretch is: **nothing structural after 5 Nov 04:00 UTC**; use the remaining time for the video, the deck and small, logged fixes.
 
+Ready-to-paste text for every field of the submission form: [`SUBMISSION_ANSWERS.md`](SUBMISSION_ANSWERS.md).
+
+## What the organisers say they want
+
+Read from the event page on 4 November 2026 (84 submissions and 225 registered hackers at that moment):
+
+* **Ecosystem DApps track:** projects driving "DeFi, RWA tokenization, and consumer-grade applications", with the goal "to generate genuine
+  user demand, driving real-world Gas consumption and active user data for the ecosystem".
+* **Demo video:** "ideally featuring actual testnet interactions; clearly demonstrating Portaldot use cases and prioritizing the product's
+  actual performance". A real transaction on screen matters more than polish.
+* **Required fields:** project name, track, one-sentence overview, GitHub repository, testnet deployment details (contract address and
+  transaction hash), demo video, pitch deck link.
+
 ## Final submission materials
 
 | Required | Status | Where / what is missing |
