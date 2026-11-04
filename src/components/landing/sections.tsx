@@ -24,6 +24,7 @@ import { Calculator } from "./calculator";
 import { CopyButton } from "./copy-button";
 import { CountUp } from "./count-up";
 import { LaunchLink } from "./launch-link";
+import { LiveChain } from "./live-chain";
 import { Magnetic } from "./magnetic";
 import { Reveal } from "./reveal";
 import { SpotlightCard } from "./spotlight-card";
@@ -291,6 +292,10 @@ export function PortalSection() {
           ))}
         </div>
       </div>
+
+      <Reveal className="mt-5">
+        <LiveChain />
+      </Reveal>
     </section>
   );
 }

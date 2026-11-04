@@ -6,7 +6,7 @@ re-run them.
 
 ```bash
 npm run dev            # in one terminal: the app on http://localhost:3000
-npm run e2e:landing    # in another: the landing page (49 checks, about 3 minutes)
+npm run e2e:landing    # in another: the landing page (58 checks, about 4 minutes)
 npm run e2e:wallet     # Connect MetaMask sign-in with a scriptable wallet (35 checks, about 3 minutes)
 npm run e2e:demo       # demo account, ten modes, EV, petrol and cab trips, rewards, analytics (45 checks, about 6 minutes)
 npm run e2e            # all three
@@ -14,7 +14,7 @@ npm run e2e            # all three
 
 | Script | What it proves |
 |---|---|
-| `landing.mjs` | The public page: content and links, every mouse effect (cursor spotlight, tilting card, parallax, canvas network, magnetic button, glowing cards), the calculator against the real engine, reduced motion, touch phones, light and dark, no horizontal scroll from 360 to 1920 px |
+| `landing.mjs` | The public page: content and links, every mouse effect (cursor spotlight, tilting card, parallax, canvas network, magnetic button, glowing cards), the calculator against the real engine, the live "Ask the chain" panel in every state (and the real `/api/chain` once), reduced motion, touch phones, light and dark, no horizontal scroll from 360 to 1920 px |
 | `wallet-login.mjs` | Sign-in with a wallet: no wallet installed, rejected, wrong network, adding Portal V3, switching and locking the account, reloading, signing out, upgrading a demo account, a phone with no extension |
 | `demo-flow.mjs` | The whole product with a labelled demo account, in the browser, end to end |
 

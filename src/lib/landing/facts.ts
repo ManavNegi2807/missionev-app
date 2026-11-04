@@ -12,3 +12,7 @@ export const CHAIN_ID = PORTAL_V3.chainId;
 
 /** CEA CO2 Baseline Database v22.0, national weighted-average grid rate, FY 2025-26 (see src/lib/carbon/emissionFactors.ts). */
 export const GRID_FACTOR_KG_PER_KWH = 0.6751;
+
+/** The owner and oracle signer recorded at deployment (README, docs/DEPLOYMENT.md). The live panel compares the chain with them. */
+export const PUBLISHED_OWNER = "0x184Ef822438f5D64C9dD41F570af794b347CE84e";
+export const PUBLISHED_ORACLE = "0x2aD67FaC8dB8fF3255bA650639049020420160De";

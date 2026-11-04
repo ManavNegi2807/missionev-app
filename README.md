@@ -172,6 +172,10 @@ record is in [`contracts/deployments/`](contracts/deployments/). **Status as of 
 `recordCommute` transaction has been sent to it yet, and the web app runs in DEMO until a server is given the oracle key. The owner can
 replace the oracle signer, so the owner key matters as much as the oracle key. Details: [`docs/SMART_CONTRACT.md`](docs/SMART_CONTRACT.md).
 
+You can also watch it answer without installing anything: the landing page's **Ask the chain, right now** panel (and `GET /api/chain`) reads
+the real testnet live. It shows the newest block and its age, the contract's code size, the token, the $MEV supply, the oracle signer, the
+owner and the EIP-712 domain check. It is read-only, needs no wallet or key, and says plainly when the public RPC is not answering.
+
 ## DEMO and LIVE
 
 The app is **DEMO** (everything labelled, nothing on-chain) until the server has `MISSIONEV_CONTRACT_ADDRESS`, `PORTAL_RPC_URL` and
@@ -185,6 +189,7 @@ transaction. `GET /api/status` shows what is configured, never the secrets.
 |---|---|
 | Landing page | A public front door at `/`: an interactive hero (mouse-reactive network, tilting card, parallax), a "try the maths" calculator that runs the real engine, and an honest real-versus-simulated summary |
 | Sign-in | **Connect MetaMask**: the wallet address is the account, with network switching, account switching and a Portal V3 add-network prompt. No phone number or password; a labelled demo account exists for visitors without a wallet |
+| Live chain proof | The landing page's **Ask the chain, right now** panel and `GET /api/chain` read the real Portal V3 testnet and the deployed contract (newest block, code, token, $MEV supply, oracle, owner, EIP-712 domain) with no wallet or key, and say so when the public RPC is down |
 | Transport profile | Ten modes, multi-vehicle; EV efficiency from battery and range or kWh per 100 km; petrol and diesel from km per litre; honest "don't know" fallbacks with confidence labels |
 | Per-trip mode | Every trip asks how you travelled; a petrol cab is measured as a petrol cab even if you own an EV |
 | Carbon engine | One accounting boundary for all modes, sourced factors (CEA grid factor, FY 2016-17 to 2025-26), formulas with substituted inputs, confidence and assumptions |
@@ -239,7 +244,7 @@ The contract tests compile the contract and execute it in an in-process EVM (`@e
 running code, and the app's EIP-712 typed data and reward preview are checked against the contract's own `DOMAIN_SEPARATOR` and arithmetic.
 The full flow (sign-in, ten modes, EV, petrol and cab trips, rewards, analytics) was also driven in a real browser in DEMO mode, and the
 LIVE flow against a local chain, with a mock wallet. The landing page, wallet sign-in and demo-flow browser tests are in [`e2e/`](e2e/README.md)
-so anyone can re-run them (129 checks); the local-chain LIVE, receipt-scan and screen-size scripts have not been moved into the repo yet.
+so anyone can re-run them (138 checks); the local-chain LIVE, receipt-scan and screen-size scripts have not been moved into the repo yet.
 
 <details>
 <summary><strong>Carbon accounting (<code>src/lib/carbon</code>)</strong></summary>

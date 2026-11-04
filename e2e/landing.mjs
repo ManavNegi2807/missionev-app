@@ -218,6 +218,70 @@ check("every control has an accessible name", (await page.evaluate(() => [...doc
 
 await ctx.close();
 
+/* =============== A2. the live chain panel ("Ask the chain, right now") =============== */
+// Every state is fed from a fixture, so it is checked whatever the public RPC is doing; the real endpoint is checked once below.
+const LIVE_STATUS = {
+  verdict: "live",
+  message: "Portal V3 answered just now: the chain is moving and the contract is where the deployment record says it is.",
+  checkedAt: Date.now(),
+  rpc: "https://test-evm-rpc-v3.portaldot.dev",
+  chainId: 420420777,
+  expectedChainId: 420420777,
+  head: { number: 321552, ageSeconds: 3 },
+  contract: {
+    address: "0x0904244017324dc1bf7c611fe1236936ee65fc82",
+    codeBytes: 5088,
+    name: "MissionEV Carbon Reward",
+    symbol: "MEV",
+    totalSupplyWei: "0",
+    oracleSigner: "0x2aD67FaC8dB8fF3255bA650639049020420160De",
+    owner: "0x184Ef822438f5D64C9dD41F570af794b347CE84e",
+    domainSeparatorOk: true,
+    matchesDeploymentRecord: true,
+  },
+};
+async function chainPanel(fixture, { fail = false, width = 1280 } = {}) {
+  const c = await browser.newContext({ viewport: { width, height: 900 } });
+  const p = await c.newPage();
+  watch(p);
+  await p.route("**/api/chain", (r) => (fail ? r.fulfill({ status: 500, body: "x" }) : r.fulfill({ json: fixture })));
+  await p.goto(`${BASE}/`, { waitUntil: "networkidle" });
+  await p.evaluate(() => document.querySelector("[data-live-chain]").scrollIntoView({ block: "center" }));
+  await p.waitForFunction(() => document.querySelector("[data-live-chain]").dataset.state !== "loading", null, { timeout: 20000 });
+  const panel = p.locator("[data-live-chain]");
+  const out = { state: await panel.getAttribute("data-state"), text: await panel.innerText(), overflow: await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth) };
+  await c.close();
+  return out;
+}
+{
+  const live = await chainPanel(LIVE_STATUS);
+  check("chain panel, live: block, chain id, code size, token, oracle, owner and the EIP-712 check are on screen", live.state === "live" && ["#321,552", "420420777", "5,088 bytes", "MissionEV Carbon Reward", "0x2aD6...160De", "0x184E...CE84e", "Matches"].every((s) => live.text.includes(s)), live.text.slice(0, 80).replace(/\n/g, " "));
+  check("chain panel is honest that nothing has been minted yet, and that it is read-only and EVM-only", /No journey has been recorded on-chain yet/.test(live.text) && /no wallet, no key, nothing is sent/i.test(live.text) && /EVM layer only/.test(live.text));
+  const minted = await chainPanel({ ...LIVE_STATUS, contract: { ...LIVE_STATUS.contract, totalSupplyWei: "10720000000000000000" } });
+  check("chain panel shows real minted supply once there is some (10.72 $MEV)", /10\.72/.test(minted.text) && !/No journey has been recorded/.test(minted.text));
+  const stale = await chainPanel({ ...LIVE_STATUS, verdict: "stale", message: "The newest block is 2.5 h old, so the endpoint may be lagging and the figures below could be out of date.", head: { number: 265334, ageSeconds: 9000 } });
+  check("chain panel, stale: says Lagging and shows how old the block is", stale.state === "stale" && /Lagging/i.test(stale.text) && /2\.5 h/.test(stale.text));
+  const down = await chainPanel({ ...LIVE_STATUS, verdict: "unreachable", message: "The Portal V3 RPC did not answer in time. It is the public testnet endpoint, so try again in a moment.", chainId: null, head: null, contract: null });
+  check("chain panel, RPC down: says so plainly and shows no made-up figures", down.state === "unreachable" && /did not answer/.test(down.text) && !/Latest block|bytes/.test(down.text));
+  const broken = await chainPanel(null, { fail: true });
+  check("chain panel, the site's own endpoint failing: shows a plain message and a way to verify by hand", broken.state === "failed" && /Couldn't ask the chain/.test(broken.text) && /contract:verify/.test(broken.text));
+  const phone = await chainPanel(LIVE_STATUS, { width: 360 });
+  check("chain panel at 360px: no horizontal scroll", phone.overflow <= 0, `overflow ${phone.overflow}`);
+
+  // the real endpoint, once: the shape is checked always; the content only when the public RPC is answering
+  const api = await browser.newContext();
+  const res = await api.request.get(`${BASE}/api/chain`, { timeout: 45000 });
+  const real = await res.json();
+  const shaped = res.status() === 200 && ["live", "stale", "wrong-chain", "no-contract", "unreachable"].includes(real.verdict) && real.expectedChainId === 420420777 && typeof real.message === "string" && !JSON.stringify(real).match(/ECONN|stack|at .*\(/);
+  check("/api/chain answers with a well-formed status and leaks no internals", shaped, `verdict ${real.verdict}`);
+  if (real.verdict === "live" || real.verdict === "stale") {
+    check("the real Portal V3 chain: right chain id, deployed code, domain separator and deployment record all match", real.chainId === 420420777 && real.contract?.codeBytes > 1000 && real.contract?.domainSeparatorOk === true && real.contract?.matchesDeploymentRecord === true, `block #${real.head?.number}, ${real.head?.ageSeconds}s old`);
+  } else {
+    console.log(`NOTE  the public Portal V3 RPC reported "${real.verdict}" during this run; the live-content check was skipped, not passed`);
+  }
+  await api.close();
+}
+
 /* =============== B. reduced motion =============== */
 {
   const c = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });

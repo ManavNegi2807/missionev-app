@@ -8,6 +8,7 @@ environment variables (`src/server/config.ts`); none carries a `NEXT_PUBLIC_` pr
 | Route | Method | Purpose | Limits and notes |
 |---|---|---|---|
 | `/api/status` | GET | What the server has configured, never the secrets; `mode` is `LIVE` only when contract address, RPC URL and oracle key are all set | Read at request time |
+| `/api/chain` | GET | A live, read-only look at Portal V3 and the deployed contract: newest block and its age, contract code size, token, total $MEV supply, oracle signer, owner, and whether the EIP-712 domain matches. Needs no key and sends nothing; says so plainly when the public RPC is down | Works with no configuration (falls back to the public deployment); cached for 15 s to spare the shared RPC |
 | `/api/trips/calculate` | POST | The shared carbon engine as a service; signs and changes nothing | |
 | `/api/trips/verify` | POST | Runs the oracle's checks on trip evidence without signing | The wallet proof is ignored here |
 | `/api/sign-trip` | POST | **The verifier node (oracle signer).** Re-verifies, calculates the CO2 avoided itself and signs the exact EIP-712 `TripPayload` for chain 420420777 | 20 per minute per IP; body up to 2 MB |
