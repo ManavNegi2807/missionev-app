@@ -5,6 +5,7 @@ import { Activity, BadgeCheck, Car, Clock, Gauge, Leaf, Navigation, Satellite } 
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { cn, formatDuration } from "@/lib/format";
 import { TRAVEL_LABEL } from "@/lib/trip/travel";
+import { TRUST_PERCENT } from "@/lib/trip/verification";
 import { useTrip, type GpsSignal } from "@/providers/trip-provider";
 
 function Kpi({
@@ -98,12 +99,12 @@ export function KpiGrid() {
         <span className="text-base sm:text-lg">{v?.label ?? "—"}</span>
       </Kpi>
       <Kpi
-        label="Trust level"
+        label="Trust tier"
         icon={<BadgeCheck className="size-4" />}
         tone={trust ? (trust.assigned ? "lime" : "err") : "muted"}
-        sub={trust ? (trust.assigned ? `${trust.tier} tier${trust.isDemo ? " · DEMO" : ""}` : "not verified") : "assigned after verification"}
+        sub={trust ? (trust.assigned ? `${TRUST_PERCENT[trust.tier]}% evidence${trust.isDemo ? " · DEMO" : ""}` : "not verified") : "assigned after verification"}
       >
-        {trust ? (trust.assigned ? "4.0" : <span className="text-base sm:text-lg">NOT VERIFIED</span>) : "—"}
+        {trust ? <span className="text-base sm:text-lg">{trust.assigned ? trust.tier.toUpperCase() : "NOT VERIFIED"}</span> : "—"}
       </Kpi>
       <Kpi
         label="Est. emissions"

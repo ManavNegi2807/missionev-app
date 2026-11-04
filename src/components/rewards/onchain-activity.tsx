@@ -42,7 +42,7 @@ export function OnchainActivity() {
       <PanelHeader
         id="chain-title"
         eyebrow="Smart-contract ledger"
-        title="Portal Layer 0 / token activity"
+        title="$MEV token activity on Portal V3"
         subtitle="Real contract events appear only when a deployed contract and a real wallet on Portal V3 are configured."
         action={
           <Badge tone={onchainActive ? "ok" : "warn"} dot>

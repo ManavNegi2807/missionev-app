@@ -77,7 +77,7 @@ export function LedgerPanel() {
         <div className="min-w-0">
           <p className="section-label mb-1">Record on-chain</p>
           <h2 id="ledger-title" className="text-[15px] font-semibold tracking-[0.06em] uppercase">
-            Portal Layer 0 / smart contract ledger
+            Smart contract on Portal V3
           </h2>
         </div>
         <Badge tone={live ? "ok" : "warn"} dot>

@@ -19,9 +19,9 @@ export function TrustPanel() {
     <Panel aria-labelledby="trust-title" className={cn(trust?.assigned && "border-lime/30", failed && "border-err/40")}>
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-4 sm:px-6">
         <div>
-          <p className="section-label mb-1">3.5 / Assign trust level</p>
+          <p className="section-label mb-1">Trip evidence</p>
           <h2 id="trust-title" className="text-[15px] font-semibold tracking-[0.06em] uppercase">
-            Trust assignment
+            Trust tier
           </h2>
         </div>
         {trust?.isDemo && <Badge tone="warn">Demo</Badge>}
@@ -50,7 +50,8 @@ export function TrustPanel() {
             <ShieldCheck aria-hidden className="size-12 shrink-0 text-lime" />
             <div className="min-w-0">
               <p className="font-mono text-[11px] tracking-[0.2em] text-muted">ASSIGNED{trust.isDemo ? " · DEMO" : ""}</p>
-              <p className="mt-1 font-mono text-3xl font-semibold tracking-wide text-lime sm:text-4xl">TRUST LEVEL 4.0</p>
+              <p className="mt-1 font-mono text-3xl font-semibold tracking-wide text-lime sm:text-4xl">{trust.tier.toUpperCase()} TIER</p>
+              <p className="mt-1 font-mono text-xs tracking-wider text-muted">{TRUST_PERCENT[trust.tier]}% evidence</p>
               <p className="mt-1 font-mono text-[11px] tracking-wider text-muted">GENERATED {formatClock(trust.at)}</p>
             </div>
           </div>
@@ -70,8 +71,8 @@ export function TrustPanel() {
         <div className="flex gap-3 rounded-xl border border-line bg-bg-2/50 p-3.5 text-sm leading-relaxed text-muted">
           <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-cyan" />
           <p>
-            <span className="text-fg">4.0</span> is the trust-level <em>stage</em> defined by the MissionEV workflow — reached when every
-            applicable check passes under the configured rules. It is not an independently certified score.
+            The tier shows how much evidence backs this trip once every applicable check has passed. It is MissionEV&apos;s own measure, not an
+            independently certified score.
             {trust?.isDemo && " Because at least one check used a mock or simulated source, this result is DEMO."}
           </p>
         </div>

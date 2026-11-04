@@ -8,7 +8,7 @@ re-run them.
 npm run dev            # in one terminal: the app on http://localhost:3000
 npm run e2e:landing    # in another: the landing page (49 checks, about 3 minutes)
 npm run e2e:wallet     # Connect MetaMask sign-in with a scriptable wallet (35 checks, about 3 minutes)
-npm run e2e:demo       # demo account, ten modes, EV, petrol and cab trips, rewards, analytics (42 checks, about 6 minutes)
+npm run e2e:demo       # demo account, ten modes, EV, petrol and cab trips, rewards, analytics (45 checks, about 6 minutes)
 npm run e2e            # all three
 ```
 

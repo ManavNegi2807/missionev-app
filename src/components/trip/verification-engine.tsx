@@ -51,6 +51,8 @@ function statusView(c: CheckResult, running: boolean) {
   }
 }
 
+const CHECK_NUMBER = { "3.1": 1, "3.2": 2, "3.3": 3, "3.4": 4 } as const;
+
 function CheckCard({ c, running }: { c: CheckResult; running: boolean }) {
   const [open, setOpen] = useState(false);
   const regionId = useId();
@@ -67,7 +69,7 @@ function CheckCard({ c, running }: { c: CheckResult; running: boolean }) {
       <div className="flex items-start gap-3 p-4">
         <span className="mt-0.5 shrink-0">{v.icon}</span>
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[10.5px] tracking-[0.16em] text-lime">CHECK {c.id}</p>
+          <p className="font-mono text-[10.5px] tracking-[0.16em] text-lime">CHECK {CHECK_NUMBER[c.id]}</p>
           <h3 className="mt-0.5 text-sm font-semibold text-fg">{m.title}</h3>
           <p className="mt-1 text-xs text-muted" title={`${m.source} — ${m.sourceNote}`}>
             <span className="text-fg/80">SOURCE:</span> {m.source}
@@ -177,7 +179,7 @@ export function VerificationEngine() {
 
           <div>
             <div className="mb-1.5 flex justify-between font-mono text-[10.5px] tracking-[0.12em] text-muted">
-              <span>{verifying ? (verify.running === "3.5" ? "ASSIGNING TRUST LEVEL (3.5)…" : `RUNNING CHECK ${verify.running}…`) : started ? "SEQUENCE COMPLETE" : "WAITING FOR A COMPLETED TRIP"}</span>
+              <span>{verifying ? (verify.running === "3.5" ? "ASSIGNING TRUST TIER…" : `RUNNING CHECK ${CHECK_NUMBER[verify.running as keyof typeof CHECK_NUMBER] ?? ""}…`) : started ? "SEQUENCE COMPLETE" : "WAITING FOR A COMPLETED TRIP"}</span>
               <span className="text-lime">{started ? `${pct}%` : "—"}</span>
             </div>
             <div

@@ -98,6 +98,9 @@ async function runTrip(tile, { assertOnForm, label } = {}) {
 /* ---------------- 4. Metro: no vehicle needed ---------------- */
 let t = await runTrip("Metro", { label: "metro" });
 check("metro trip verified without any vehicle", /VERIFIED/.test(t) && /Metro/.test(t));
+check("trust is shown as an evidence tier (Gold, Silver or Bronze), never a workflow-stage number like 4.0", /(GOLD|SILVER|BRONZE) TIER/.test(t) && /\d+% evidence/.test(t) && !/TRUST LEVEL 4\.0|Trust 4\.0/.test(t));
+check("no diagram wording on the trip screen: stage numbers, 'state machine', 'Portal Layer 0'", !/3\.5 \/|CHECK 3\.\d|state machine|Portal Layer 0/i.test(t), (t.match(/3\.5 \/|CHECK 3\.\d|state machine|Portal Layer 0/i) ?? [""])[0]);
+check("the four checks are numbered 1 to 4", ["CHECK 1", "CHECK 2", "CHECK 3", "CHECK 4"].every((c) => t.includes(c)));
 check("carbon comparison shows reference journey and avoided emissions", /Reference journey/i.test(t) && /Estimated avoided emissions/i.test(t));
 check("DEMO label, never 'on-chain', before credit", /Demo journey — not on-chain/.test(t));
 const dist = (await page.locator('[data-kpi="Distance travelled"]').innerText()).match(/[\d.]+/)?.[0];

@@ -26,9 +26,9 @@ const STATES: Array<{ id: TripStatus | "RESULT"; label: string }> = [
 
 const SCENARIOS: Array<{ id: Scenario; label: string; note: string }> = [
   { id: "clean", label: "Clean trip", note: "All checks should pass." },
-  { id: "gps-replay", label: "Replay anomaly", note: "Clock stalls mid-trip → check 3.3 fails." },
-  { id: "route-mismatch", label: "Route deviation", note: "Vehicle leaves the route → check 3.4 fails." },
-  { id: "ridelog-mismatch", label: "EV ride-log mismatch", note: "Private EV only → check 3.2 fails." },
+  { id: "gps-replay", label: "Replay anomaly", note: "Clock stalls mid-trip → the motion check fails." },
+  { id: "route-mismatch", label: "Route deviation", note: "Vehicle leaves the route → the route check fails." },
+  { id: "ridelog-mismatch", label: "EV ride-log mismatch", note: "Private EV only → the ride-log check fails." },
 ];
 
 /** The eight ways to answer "How did you travel for this journey?". Private tiles then pick one of your saved vehicles. */
@@ -90,7 +90,7 @@ export function SessionPanel() {
     <Panel aria-labelledby="session-title">
       <PanelHeader
         id="session-title"
-        eyebrow="Journey state machine"
+        eyebrow="Your journey"
         title="Trip session"
         action={
           <Badge tone={status === "FAILED" ? "err" : status === "VERIFIED" ? "ok" : status === "RECORDING" ? "lime" : "neutral"} dot>

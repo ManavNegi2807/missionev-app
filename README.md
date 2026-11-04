@@ -101,6 +101,39 @@ Reward: `20 MEV per kg avoided × streak multiplier (1× / 1.5× / 2× / 3× at 
 avoided. $MEV is a prototype reward token, **not a certified carbon credit**, and it is a different thing from the native tPOT used for gas.
 More: [`docs/FLOW.md`](docs/FLOW.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
+## How the credit is calculated
+
+One engine (`src/lib/carbon`) does the same three steps for every mode:
+
+1. **What the journey emitted.** Carbon dioxide comes from burning something. A petrol engine burns fuel (2.232 kg CO₂ per litre; diesel
+   2.675). An electric vehicle burns nothing itself, but the power station behind the socket does: India's grid averages **0.6751 kg CO₂ per
+   kWh** (CEA, FY 2025-26), so an EV is *not* zero-emission. Its energy use is multiplied by that factor, and a battery-side figure is first
+   divided by an assumed 0.9 charging efficiency. Metro is 0.041 kWh per passenger-km and an electric bus about 0.038 (both low-confidence
+   placeholders, flagged in the app). Walking and cycling emit nothing at the point of use.
+2. **Against a reference journey.** The same distance in an average petrol vehicle: **18 km/l for a car** (124 g CO₂ per km) when you used a
+   car-class vehicle (your own car or EV, or a cab), and **50 km/l for a two-wheeler** (45 g per km) when you used no vehicle (metro, bus,
+   walking). `avoided = max(0, floor(reference − emitted))`, in whole grams, and a journey that emits more than its reference earns nothing.
+3. **Into $MEV**, with the contract's own arithmetic: `20 MEV per kg avoided × streak multiplier (1×, 1.5×, 2×, 3× at 1, 5, 10, 20 days) + a
+   mode bonus` (walking or cycling 15, electric car, electric two-wheeler and metro 10, anything else 0). Petrol, diesel and CNG journeys are
+   measured but never rewarded; that is MissionEV's rule, enforced by the verifier node before it signs.
+
+Worked example: **10 km, first day of a streak** (the electric car is a sample with a 40.5 kWh battery and 325 km range). A test
+([`tests/worked-example.test.ts`](tests/worked-example.test.ts)) pins these figures to the engine.
+
+| Journey | Emitted | Reference | Avoided | $MEV |
+|---|---|---|---|---|
+| Walk or cycle | 0 g | 446 g (petrol two-wheeler) | 446 g | 23.92 |
+| Metro | 277 g | 446 g (petrol two-wheeler) | 169 g | 13.38 |
+| Electric bus | 255 g | 446 g (petrol two-wheeler) | 191 g | 3.82 (no bonus) |
+| Electric car | 935 g | 1,240 g (petrol car) | 305 g | 16.10 |
+| Petrol car | 1,240 g | 1,240 g (petrol car) | 0 g | 0, never rewarded |
+
+What it does **not** count: only energy used while travelling (the "direct energy-use" boundary). Fuel and electricity supply chains,
+transmission losses, and building the vehicle or its battery are outside it, and the app says so. The reference vehicles and the metro and
+e-bus figures are prototype assumptions, not fleet statistics. And MissionEV counts **people's journeys**, not freight: trucks, delivery
+vans and cargo would need payload-based factors (grams per tonne-km), which are not modelled. A ride-hail cab *is* handled, from the vehicle
+you confirm and the number of passengers.
+
 ## Why Portal V3
 
 * **EVM compatibility.** Standard EIP-712 typed-data signatures, `ecrecover` and an ERC-20 token work unchanged; the app and tests use
@@ -206,7 +239,7 @@ The contract tests compile the contract and execute it in an in-process EVM (`@e
 running code, and the app's EIP-712 typed data and reward preview are checked against the contract's own `DOMAIN_SEPARATOR` and arithmetic.
 The full flow (sign-in, ten modes, EV, petrol and cab trips, rewards, analytics) was also driven in a real browser in DEMO mode, and the
 LIVE flow against a local chain, with a mock wallet. The landing page, wallet sign-in and demo-flow browser tests are in [`e2e/`](e2e/README.md)
-so anyone can re-run them (126 checks); the local-chain LIVE, receipt-scan and screen-size scripts have not been moved into the repo yet.
+so anyone can re-run them (129 checks); the local-chain LIVE, receipt-scan and screen-size scripts have not been moved into the repo yet.
 
 <details>
 <summary><strong>Carbon accounting (<code>src/lib/carbon</code>)</strong></summary>
