@@ -67,7 +67,7 @@ streak: counts consecutive UTC calendar days (block.timestamp / 1 days)
 
 ## What changed from the supplied v1
 
-`contracts/MissionEV.sol` is kept verbatim. v2 keeps the same `recordCommute` ABI, enum numbering and EIP-712 payload, so the oracle and
+`contracts/MissionEV.sol` is unchanged apart from one comment line removed from its header (the code, the ABI and the behaviour are identical; only the compiler's metadata hash differs). v2 keeps the same `recordCommute` ABI, enum numbering and EIP-712 payload, so the oracle and
 front end work unchanged. It fixes: a zero oracle accepted by the constructor (critical in v1: any garbage signature would mint), no
 low-`s` check, no signature-length check, no `v` check, `transfer` to the zero address, and the missing `transferFrom`. It also stops
 paying the mode bonus when 0 g was avoided (a behaviour change). Every finding was demonstrated by running the compiled contract

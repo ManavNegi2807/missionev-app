@@ -1,7 +1,7 @@
 # MissionEV.sol — security and compatibility audit
 
 Scope: `contracts/MissionEV.sol` (the source supplied for this upgrade; it was **not** in the repo or workspace before, so it was
-added verbatim). Compiled with `solc-js 0.8.34` (pinned in `package.json`), optimizer 200 runs, `evmVersion: paris`
+added as supplied; later one comment line was removed from its header, which leaves the code and ABI identical). Compiled with `solc-js 0.8.34` (pinned in `package.json`), optimizer 200 runs, `evmVersion: paris`
 (`npm run contract:compile` → `contracts/artifacts/MissionEV.json` and `src/lib/contract/missionev.abi.ts`).
 
 **Deployment status:** when this audit was written no deployed address, ABI or deployment record existed. On 2026-11-03 the

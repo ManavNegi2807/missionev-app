@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 /**
  * @title MissionEV — Gamified Clean Mobility & Carbon Accounting
  * @notice Created for:
- *   - Build with Bharat 5.0 (Microsoft Azure Ecosystem)
  *   - Portaldot Hacker House 2026 (Portal Layer 0 EVM Ecosystem)
  *
  * @dev Deployed on Portal Layer 0 EVM testnet.

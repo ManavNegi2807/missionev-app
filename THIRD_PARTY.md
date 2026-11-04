@@ -61,7 +61,7 @@ Details and caveats: [`docs/INTEGRATION_REPORT.md`](docs/INTEGRATION_REPORT.md).
 
 ## Contract code
 
-`contracts/MissionEV.sol` (MIT, per its SPDX header) was supplied as the project's contract and is kept verbatim.
+`contracts/MissionEV.sol` (MIT, per its SPDX header) was supplied as the project's contract and is unchanged apart from one comment line removed from its header.
 `contracts/proposed/MissionEVv2.sol` is the same contract with the fixes listed in [`docs/CONTRACT_AUDIT.md`](docs/CONTRACT_AUDIT.md).
 It is written in the plain ERC-20 style but does not import OpenZeppelin or any other library.
 

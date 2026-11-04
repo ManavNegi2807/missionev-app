@@ -217,7 +217,7 @@ Solidity 0.8 compiled with solc-js 0.8.34, vitest with `@ethereumjs/vm`. Full li
 | `src/lib/carbon/` | Emission factors, efficiency, the journey engine, contract mapping, reward policy and preview |
 | `src/lib/oracle/`, `src/lib/contract/` | EIP-712 payload, wallet proof, ABI and chain constants |
 | `src/providers/`, `src/components/` | App state and UI |
-| `contracts/` | `MissionEV.sol` (as supplied), `proposed/MissionEVv2.sol` (deployed), compiled artifacts, deployment record |
+| `contracts/` | `MissionEV.sol` (as supplied, minus one header comment line), `proposed/MissionEVv2.sol` (deployed), compiled artifacts, deployment record |
 | `scripts/` | `compile-contract`, `deploy-contract`, `verify-deployment`, `network-health`, `dev-chain` |
 | `tests/` | 100+ vitest tests: carbon, contract, oracle, transport, routes, receipt OCR, network health |
 | `e2e/` | Browser tests with playwright-core: landing page, wallet sign-in, demo flow (`npm run e2e`) |
@@ -307,7 +307,7 @@ overrides); charts and the map read the variables.
   carries on with small, logical commits to 3 November 2026; see `git log`. Nothing was back-dated.
 * **Added after the first front-end commit:** the journey-based carbon engine, transport profile, oracle service and EIP-712 flow, the
   contract integration and audit, tests, deploy and verify tooling, the testnet deployment, and the documentation.
-* **Supplied or carried over:** `contracts/MissionEV.sol` was supplied as the project's contract and is kept verbatim; the reference-journey
+* **Supplied or carried over:** `contracts/MissionEV.sol` was supplied as the project's contract and is unchanged apart from one comment line removed from its header; the reference-journey
   constants (petrol car 18 km/l, petrol two-wheeler 50 km/l) were carried over from an earlier prototype.
 * **Simulated or mocked:** demo accounts, community analytics, redemptions, and any trip captured in Simulated mode. Each is labelled in the UI.
 * **Third-party code, data and services:** [`THIRD_PARTY.md`](THIRD_PARTY.md).
