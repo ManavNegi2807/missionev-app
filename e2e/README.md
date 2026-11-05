@@ -10,6 +10,7 @@ npm run e2e:landing    # in another: the landing page (58 checks, about 4 minute
 npm run e2e:wallet     # Connect MetaMask sign-in with a scriptable wallet (35 checks, about 3 minutes)
 npm run e2e:demo       # demo account, nine journey modes, EV, petrol and cab trips, rewards, analytics (45 checks, about 6 minutes)
 npm run e2e            # all three
+npm run e2e:demo-run   # the flag-gated Testnet Demo Trip, against the LOCAL chain (see below; not part of `e2e`)
 ```
 
 | Script | What it proves |
@@ -20,6 +21,18 @@ npm run e2e            # all three
 
 **Options.** `BASE=https://missionev-app.vercel.app npm run e2e:landing` tests the live site instead. `BROWSER_PATH=/path/to/chrome` picks a
 browser, and `HEADED=1` shows it. Screenshots are written to `e2e/.artifacts/` (git-ignored).
+
+**`demo-run.mjs`** needs a local chain and a server with the demo flag on, so it is not part of `npm run e2e`:
+
+```bash
+npm run contract:compile && npm run dev:chain   # prints the contract address and a throwaway oracle key
+# then start the app with those values plus DEMO_SIGNING=true NEXT_PUBLIC_DEMO_SIGNING=true, and:
+npm run e2e:demo-run
+```
+
+It checks that a demo account never sees the Demo run card, that a connected wallet does, that the run stops itself at 1 km or more,
+that the banner and the DEMO · ON-CHAIN badge appear, that the transaction is confirmed by the real contract on the local chain, and that
+`/api/activity` and the landing panel read it back. It is not evidence about Portal V3 or the MetaMask extension.
 
 **About the wallet.** `wallet-login.mjs` installs a small fake EIP-1193 wallet in the page, not the MetaMask extension, so it can reject,
 lock and switch networks on command. It tests how the app *behaves* with a wallet; it does not prove the real extension works.

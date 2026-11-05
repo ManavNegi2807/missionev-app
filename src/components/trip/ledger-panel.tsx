@@ -83,7 +83,7 @@ export function LedgerPanel() {
           </h2>
         </div>
         <Badge tone={live ? "ok" : "warn"} dot>
-          {!s || s.phase === "not-started" ? (live ? "Live" : "Demo") : live ? (demoTrip ? "Testnet demo · on-chain flow" : "Live · on-chain flow") : "Demo · not on-chain"}
+          {!s || s.phase === "not-started" ? (live ? (demoTrip ? "Testnet demo" : "Live") : "Demo") : live ? (demoTrip ? "Testnet demo · on-chain flow" : "Live · on-chain flow") : "Demo · not on-chain"}
         </Badge>
       </header>
 

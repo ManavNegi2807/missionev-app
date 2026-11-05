@@ -43,7 +43,8 @@
     "e2e": "npm run e2e:landing && npm run e2e:wallet && npm run e2e:demo",
     "e2e:landing": "node e2e/landing.mjs",
     "e2e:wallet": "node e2e/wallet-login.mjs",
-    "e2e:demo": "node e2e/demo-flow.mjs"
+    "e2e:demo": "node e2e/demo-flow.mjs",
+    "e2e:demo-run": "node e2e/demo-run.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
