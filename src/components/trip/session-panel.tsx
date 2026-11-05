@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Bike, Bus, Car, CarTaxiFront, FlaskConical, Footprints, MapPin, Satellite, TrainFront, Zap } from "lucide-react";
+import { AlertTriangle, Wallet, Bike, Bus, Car, CarTaxiFront, FlaskConical, Footprints, MapPin, Satellite, TrainFront, Zap } from "lucide-react";
 import { SelectField } from "@/components/ui/fields";
 import { Alert, Badge, Button, Panel, PanelHeader } from "@/components/ui/primitives";
 import type { JourneyMode } from "@/lib/carbon/types";
@@ -51,8 +51,10 @@ export function SessionPanel() {
   const { status, setup, setSetup, selection, notice, dismissNotice, start, startDemoRun, gps } = useTrip();
   const wallet = useWallet();
   const { status: server } = useIntegrationStatus();
-  // Offered only when this deployment shows the path (public flag), the server says it signs demo trips, and a real wallet is connected.
-  const demoOffered = demoSigningUi() && server?.mode === "LIVE" && server.demoSigning === true && wallet.mode === "browser";
+  // Shown when this deployment offers the path (public flag) and the server says it signs demo trips. Without a real wallet (for
+  // example a demo account) the card asks to connect one first: the transaction is sent from the commuter's own wallet.
+  const demoOffered = demoSigningUi() && server?.mode === "LIVE" && server.demoSigning === true;
+  const hasWallet = wallet.mode === "browser";
   const { registration } = useOnboarding();
   const idle = status === "IDLE";
   const transport = registration?.transport ?? null;
@@ -198,13 +200,21 @@ export function SessionPanel() {
               variant="primary"
               size="lg"
               className="w-full"
-              disabled={!idle || !wallet.onExpectedChain || Boolean(selection.blocked)}
+              disabled={!idle || !hasWallet || !wallet.onExpectedChain || Boolean(selection.blocked)}
               icon={<FlaskConical aria-hidden className="size-4" />}
               onClick={() => void startDemoRun()}
             >
               Demo run (1 km+)
             </Button>
-            {!wallet.onExpectedChain && <p className="text-xs text-warn">Switch your wallet to {PORTAL_V3.name} first.</p>}
+            {!hasWallet && (
+              <div className="space-y-2">
+                <p className="text-xs text-warn">A demo account has no wallet, so nothing can be sent from it. Connect a wallet to record the demo trip on-chain.</p>
+                <Button variant="secondary" size="sm" loading={wallet.connecting} icon={<Wallet aria-hidden className="size-3.5" />} onClick={() => void wallet.connect()}>
+                  Connect wallet to record on-chain
+                </Button>
+              </div>
+            )}
+            {hasWallet && !wallet.onExpectedChain && <p className="text-xs text-warn">Switch your wallet to {PORTAL_V3.name} first.</p>}
           </div>
         )}
 
