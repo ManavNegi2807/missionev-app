@@ -17,7 +17,7 @@ commuter's own wallet submits. Built for the Portaldot Hacker House 2026.
 | | |
 |---|---|
 | Smart contract | **Live on Portal V3 testnet and verified**: [`0x0904…fc82`](#deployed-on-portal-v3-testnet) |
-| Web app | **Live demo: https://missionev.vercel.app** (DEMO mode, clearly labelled, no keys on the server). Also runs locally. LIVE needs a server with the oracle key (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)) |
+| Web app | **Live demo: https://missionev-app.vercel.app** (DEMO mode, clearly labelled, no keys on the server). Also runs locally. LIVE needs a server with the oracle key (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)) |
 | Tests | 100+ passing, including the compiled contract executed in an in-process EVM; CI runs lint, type-check, tests and build |
 | Not yet | A first `recordCommute` transaction sent from the web app to the deployed contract |
 | Honesty | Sign-in is a MetaMask connection (or a labelled demo account); redemptions are simulated and community analytics are synthetic. See [real versus simulated](docs/INTEGRATION_REPORT.md) |
@@ -38,7 +38,7 @@ Pitch deck: [`docs/pitch/MissionEV-pitch-deck.pdf`](docs/pitch/MissionEV-pitch-d
 
 ## Try it in 60 seconds
 
-**No install:** open **https://missionev.vercel.app** (it opens on a landing page that explains the idea; press **Launch the app**) and follow the steps below. It is the same app, hosted in DEMO mode: every simulated
+**No install:** open **https://missionev-app.vercel.app** (it opens on a landing page that explains the idea; press **Launch the app**) and follow the steps below. It is the same app, hosted in DEMO mode: every simulated
 result is labelled and nothing on that site holds a key. To run it yourself:
 
 ```bash
@@ -190,7 +190,7 @@ transaction. `GET /api/status` shows what is configured, never the secrets.
 | Landing page | A public front door at `/`: an interactive hero (mouse-reactive network, tilting card, parallax), a "try the maths" calculator that runs the real engine, and an honest real-versus-simulated summary |
 | Sign-in | **Connect MetaMask**: the wallet address is the account, with network switching, account switching and a Portal V3 add-network prompt. No phone number or password; a labelled demo account exists for visitors without a wallet |
 | Live chain proof | The landing page's **Ask the chain, right now** panel and `GET /api/chain` read the real Portal V3 testnet and the deployed contract (newest block, code, token, $MEV supply, oracle, owner, EIP-712 domain) with no wallet or key, and say so when the public RPC is down |
-| Transport profile | Ten modes, multi-vehicle; EV efficiency from battery and range or kWh per 100 km; petrol and diesel from km per litre; honest "don't know" fallbacks with confidence labels |
+| Transport profile | Nine journey modes plus an "other" that is not calculated, multi-vehicle; EV efficiency from battery and range or kWh per 100 km; petrol and diesel from km per litre; honest "don't know" fallbacks with confidence labels |
 | Per-trip mode | Every trip asks how you travelled; a petrol cab is measured as a petrol cab even if you own an EV |
 | Carbon engine | One accounting boundary for all modes, sourced factors (CEA grid factor, FY 2016-17 to 2025-26), formulas with substituted inputs, confidence and assumptions |
 | Verifier node | `POST /api/sign-trip`: re-verifies the evidence, calculates the CO2 avoided itself, applies the reward policy, reads the nonce from the chain, signs the exact EIP-712 payload |
@@ -242,7 +242,7 @@ npm run e2e        # the browser tests (Chrome or Edge, nothing downloaded): lan
 
 The contract tests compile the contract and execute it in an in-process EVM (`@ethereumjs/vm`), so every audit finding is demonstrated by
 running code, and the app's EIP-712 typed data and reward preview are checked against the contract's own `DOMAIN_SEPARATOR` and arithmetic.
-The full flow (sign-in, ten modes, EV, petrol and cab trips, rewards, analytics) was also driven in a real browser in DEMO mode, and the
+The full flow (sign-in, nine journey modes, EV, petrol and cab trips, rewards, analytics) was also driven in a real browser in DEMO mode, and the
 LIVE flow against a local chain, with a mock wallet. The landing page, wallet sign-in and demo-flow browser tests are in [`e2e/`](e2e/README.md)
 so anyone can re-run them (138 checks); the local-chain LIVE, receipt-scan and screen-size scripts have not been moved into the repo yet.
 

@@ -9,7 +9,7 @@ The organisers ask for a public video under 3 minutes that shows the real produc
 1. Use a throwaway MetaMask account with no funds. Never show a seed phrase or a private key. The pop-ups only show the address.
 2. In MetaMask, remove the Portal V3 network if you added it before (Settings, Networks), so the video can show it being added.
 3. Close other tabs and notifications. Browser window about 1280 to 1440 px wide, zoom 100 to 110%, light theme.
-4. Open https://missionev.vercel.app in a new private window. In a second window, have a terminal in the project folder ready to run npm run contract:verify.
+4. Open https://missionev-app.vercel.app in a new private window. In a second window, have a terminal in the project folder ready to run npm run contract:verify.
 5. Record screen and voice together: Win + G (Xbox Game Bar) or OBS Studio (free). A quiet room and earphones with a mic are enough.
 6. Do one dry run with a timer.
 

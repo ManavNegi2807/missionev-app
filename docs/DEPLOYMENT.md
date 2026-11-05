@@ -87,7 +87,7 @@ the settings to use.
 
 ## Hosting
 
-The public demo is **https://missionev.vercel.app**. It is a Vercel project connected to this repository: every push to `master` builds and
+The public demo is **https://missionev-app.vercel.app**. It is a Vercel project connected to this repository: every push to `master` builds and
 deploys to production. It runs in **DEMO mode** with **no environment variables**, so no key of any kind is on the host; `/api/status` on
 the live site reports `"mode":"DEMO"`. Vercel's deployment protection leaves the short production address public, while the long
 per-deployment addresses stay behind a Vercel login, so always share the short one.

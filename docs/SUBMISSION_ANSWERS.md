@@ -26,7 +26,7 @@ Deploy transaction: 0x11562d9b34bc9236413a1d49a7712179d8f50defdc610b3c81c6dbf01d
 Owner / deployer:   0x184Ef822438f5D64C9dD41F570af794b347CE84e
 Oracle signer:      0x2aD67FaC8dB8fF3255bA650639049020420160De
 Check it yourself:  npm run contract:verify   (read-only; compares the on-chain code with the compiled artifact)
-Live check:         the "Ask the chain, right now" panel at https://missionev.vercel.app (reads the chain, nothing is sent)
+Live check:         the "Ask the chain, right now" panel at https://missionev-app.vercel.app (reads the chain, nothing is sent)
 Status:             the contract is live and verified. No recordCommute transaction has been sent from the web app yet, because one
                     costs about 35 tPOT in gas and the available wallets hold less. The verifier node's signature was accepted by
                     the deployed contract in an eth_call simulation (nothing sent).
@@ -39,7 +39,7 @@ Status:             the contract is live and verified. No recordCommute transact
 
 Smart contract deployed and verified on Portal V3 testnet. Journey-based carbon engine with sourced emission factors. Verifier node
 (`/api/sign-trip`) that recomputes everything and signs an EIP-712 payload. MetaMask sign-in with network switching. Four-screen web app
-and an interactive landing page, live at https://missionev.vercel.app. A live read-only panel that shows the chain and the contract
+and an interactive landing page, live at https://missionev-app.vercel.app. A live read-only panel that shows the chain and the contract
 answering. More than 150 unit tests (including the compiled contract run in an EVM), 138 browser checks, and CI on every push.
 Pitch deck and documentation in the repository.
 
@@ -52,7 +52,7 @@ server session. Sourced metro and e-bus factors to replace today's placeholders.
 ## Before you press submit
 
 1. Open the repository in a private window and check it is public, the README renders, and the CI badge is green.
-2. Open https://missionev.vercel.app in a private window and press Launch the app.
+2. Open https://missionev-app.vercel.app in a private window and press Launch the app.
 3. Open the video link in a private window and check it plays without signing in.
 4. Open the deck link and check it opens.
 5. Check the README's team section and the origin statement (what existed before 14 October) are true.

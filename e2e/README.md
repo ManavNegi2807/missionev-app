@@ -8,7 +8,7 @@ re-run them.
 npm run dev            # in one terminal: the app on http://localhost:3000
 npm run e2e:landing    # in another: the landing page (58 checks, about 4 minutes)
 npm run e2e:wallet     # Connect MetaMask sign-in with a scriptable wallet (35 checks, about 3 minutes)
-npm run e2e:demo       # demo account, ten modes, EV, petrol and cab trips, rewards, analytics (45 checks, about 6 minutes)
+npm run e2e:demo       # demo account, nine journey modes, EV, petrol and cab trips, rewards, analytics (45 checks, about 6 minutes)
 npm run e2e            # all three
 ```
 
@@ -18,7 +18,7 @@ npm run e2e            # all three
 | `wallet-login.mjs` | Sign-in with a wallet: no wallet installed, rejected, wrong network, adding Portal V3, switching and locking the account, reloading, signing out, upgrading a demo account, a phone with no extension |
 | `demo-flow.mjs` | The whole product with a labelled demo account, in the browser, end to end |
 
-**Options.** `BASE=https://missionev.vercel.app npm run e2e:landing` tests the live site instead. `BROWSER_PATH=/path/to/chrome` picks a
+**Options.** `BASE=https://missionev-app.vercel.app npm run e2e:landing` tests the live site instead. `BROWSER_PATH=/path/to/chrome` picks a
 browser, and `HEADED=1` shows it. Screenshots are written to `e2e/.artifacts/` (git-ignored).
 
 **About the wallet.** `wallet-login.mjs` installs a small fake EIP-1193 wallet in the page, not the MetaMask extension, so it can reject,
