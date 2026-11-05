@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleDashed, Coins, ExternalLink, FlaskConical, Fuel, Link2, Loader2, PenLine, ShieldCheck, Wallet, XCircle } from "lucide-react";
 import { Alert, Badge, Button, KV, Panel } from "@/components/ui/primitives";
@@ -273,6 +274,12 @@ export function LedgerPanel() {
                     {s.onchain.carbonScore}
                   </KV>
                 </dl>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+                  <Link href="/rewards" className="inline-flex h-9 items-center rounded-lg bg-lime px-3.5 font-mono text-xs tracking-[0.1em] text-bg uppercase hover:shadow-glow-lime" data-go-redeem>
+                    See it in Rewards, then redeem
+                  </Link>
+                  <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted">Your balance there is read from the contract. Redeeming is a labelled simulation: the contract has no redeem function.</p>
+                </div>
               </div>
             )}
 

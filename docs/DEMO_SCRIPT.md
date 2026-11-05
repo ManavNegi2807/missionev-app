@@ -93,7 +93,9 @@ Use this if you cannot take a real-GPS trip. The transaction is real; the trip i
 1. Sign in with MetaMask, tick Metro, Save transport profile, go to Capture trip.
 2. Point at the **Demo run (1 km+)** card and read its first line aloud. Press it. The banner **TESTNET DEMO TRIP** appears; leave it in frame.
 3. The trip stops itself at about 1.2 km and verifies itself. Press **Sign & record on-chain (testnet demo)**, confirm the two MetaMask prompts (a free signature, then the transaction).
-4. Show **CONFIRMED ON PORTAL**, the transaction hash, the block number and the minted $MEV. Then open the landing page and show the row in **Recent on-chain activity**.
+4. Show **CONFIRMED ON PORTAL**, the transaction hash, the block number and the minted $MEV.
+5. Press **See it in Rewards, then redeem**. The balance shown there is read from the contract (about 10 $MEV after one short metro trip). Press **Redeem** on **Starter Metro Ride** (5 $MEV) and confirm. Say clearly that the redemption is a simulation: the contract has no redeem function, and the dialog says so.
+6. Finally open the landing page and show the row in **Recent on-chain activity**.
 
 > This is a testnet demo trip: the distance is synthetic, and the app labels it that way. *(pause)* But the transaction is real. The verifier
 > recomputed the trip, signed it, and my own wallet sent it to the contract on Portal V3. Here is the hash, here is the block, and here is the

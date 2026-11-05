@@ -124,7 +124,7 @@ const pulled = await page.evaluate(() => new DOMMatrix(getComputedStyle(document
 await page.mouse.move(box.x + box.width + 600, box.y + 300, { steps: 6 });
 await page.waitForTimeout(500);
 const released = await page.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector(".lp-hero a[data-launch]").parentElement).transform).m41);
-check("the main button is magnetic: it leans toward a nearby cursor and lets go", pulled > 8 && Math.abs(released) < 1, `pulled ${pulled.toFixed(1)}px, released ${released.toFixed(1)}px`);
+check("the main button leans a few pixels toward a nearby cursor (capped, so it never overlaps its neighbour) and lets go", pulled > 2 && pulled <= 7 && Math.abs(released) < 1, `pulled ${pulled.toFixed(1)}px, released ${released.toFixed(1)}px`);
 
 // --- glowing cards ---
 await page.evaluate(() => document.getElementById("how").scrollIntoView());

@@ -125,6 +125,24 @@ await page.screenshot({ path: `${OUT}03-confirmed.png`, fullPage: true });
 const history = await page.locator("#history-title").locator("xpath=ancestor::section").innerText();
 check("trip history shows the distinct DEMO · ON-CHAIN badge, not the GPS 'On-chain' one", /DEMO · ON-CHAIN/.test(history) && !/\bOn-chain\b/.test(history.replace(/DEMO · ON-CHAIN/g, "")));
 
+/* ---------- B2. from the confirmed trip to a (simulated) redemption, as a judge would ---------- */
+await page.locator("[data-go-redeem]").click();
+await page.waitForURL(/\/rewards/);
+await page.getByRole("button", { name: /Redeem Starter Metro Ride for 5 \$MEV/ }).waitFor({ timeout: 20000 });
+await page.screenshot({ path: `${OUT}03b-rewards.png`, fullPage: false });
+await page.getByRole("button", { name: /Redeem Starter Metro Ride for 5 \$MEV/ }).click();
+await page.getByText(/Available \$MEV balance/i).waitFor();
+t = await text(page);
+check("the redeem dialog shows the on-chain balance and says plainly the redemption is simulated", /on-chain balanceOf/i.test(t) && /Simulated\. The MissionEV contract has no redeem/i.test(t));
+const confirmBtn = page.getByRole("button", { name: "Confirm demo redemption" });
+check("one short demo trip earns enough to afford the starter voucher (button enabled)", await confirmBtn.isEnabled());
+await confirmBtn.click();
+await page.getByText(/Demo redemption complete/i).waitFor({ timeout: 15000 });
+t = await text(page);
+check("the result is labelled DEMO · SIMULATED, with no transaction claimed", /DEMO · SIMULATED/i.test(t) && /no blockchain transaction exists/i.test(t));
+await page.screenshot({ path: `${OUT}03c-redeemed.png`, fullPage: false });
+await page.goto(`${BASE}/capture-trip`, { waitUntil: "networkidle" });
+
 /* ---------- C. the chain, not the page, is the proof ---------- */
 const act = await fetch(`${BASE}/api/activity`).then((r) => r.json());
 const mine = (act.events ?? []).filter((e) => e.commuter.toLowerCase() === account.address.toLowerCase());

@@ -24,6 +24,8 @@ export interface CatalogItem {
  * "to be set with partners"). No item implies a commercial partnership or real voucher availability.
  */
 export const CATALOG: CatalogItem[] = [
+  // Priced so that ONE short trip can afford it (a 1+ km metro trip mints about 10 $MEV): a reviewer can go from a first trip to a redemption in one sitting.
+  { id: "starter-ride", name: "Starter Metro Ride", category: "Public Transport", group: "Metro passes", description: "A simulated single-ride voucher, priced so one short trip can afford it.", cost: 5, stock: 50, popularity: 99, icon: "metro" },
   { id: "metro-voucher", name: "Metro Travel Voucher", category: "Public Transport", group: "Metro passes", description: "A simulated metro travel voucher.", cost: 50, stock: 24, popularity: 95, icon: "metro" },
   { id: "ev-charging", name: "EV Charging Discount", category: "EV Charging", group: "EV charging", description: "A demo EV charging reward.", cost: 100, stock: 18, popularity: 88, icon: "charge" },
   { id: "bike-pass", name: "Bike Sharing Pass", category: "Micro Mobility", group: "Bike sharing", description: "A demo bicycle-sharing benefit.", cost: 40, stock: 40, popularity: 70, icon: "bike" },
