@@ -58,7 +58,7 @@ const launchPage = async (viewport = { width: 1280, height: 900 }) => {
   await ctx.addInitScript(installWallet, { A: account.address, PORTAL_HEX });
   const page = await ctx.newPage();
   const errors = [];
-  page.on("console", (m) => m.type() === "error" && !/hydrat|caret-color|DevTools|favicon|Failed to load resource/i.test(m.text()) && errors.push(m.text().slice(0, 200)));
+  page.on("console", (m) => m.type() === "error" && !/caret-color|DevTools|favicon|Failed to load resource/i.test(m.text()) && errors.push(m.text().slice(0, 200)));
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message.slice(0, 200)}`));
   return { browser, ctx, page, errors };
 };

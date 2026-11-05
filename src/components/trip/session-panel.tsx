@@ -55,6 +55,16 @@ export function SessionPanel() {
   // example a demo account) the card asks to connect one first: the transaction is sent from the commuter's own wallet.
   const demoOffered = demoSigningUi() && server?.mode === "LIVE" && server.demoSigning === true;
   const hasWallet = wallet.mode === "browser";
+  // Why the demo run is unavailable, in words, so the card never just disappears.
+  const demoOffReason = demoOffered
+    ? null
+    : !server
+      ? "Checking whether this server allows testnet demo trips…"
+      : !demoSigningUi()
+        ? "Off in this build: NEXT_PUBLIC_DEMO_SIGNING isn't set to true."
+        : server.mode !== "LIVE"
+          ? "Off on this server: it is in DEMO mode (no oracle key, contract address or RPC), so nothing can be signed or sent."
+          : "Off on this server: DEMO_SIGNING isn't set to true, so the oracle refuses simulated trips.";
   const { registration } = useOnboarding();
   const idle = status === "IDLE";
   const transport = registration?.transport ?? null;
@@ -187,8 +197,8 @@ export function SessionPanel() {
           {setup.mode === "ride_hail" && <RideHailSection disabled={!idle} />}
         </div>
 
-        {demoOffered && (
-          <div className="space-y-3 rounded-xl border border-warn/40 bg-warn/[0.06] p-3.5" data-demo-run-card>
+        {(
+          <div className="space-y-3 rounded-xl border border-warn/40 bg-warn/[0.06] p-3.5" data-demo-run-card data-demo-run-state={demoOffered ? "on" : "off"}>
             <p className="flex items-center gap-2 font-mono text-[11px] tracking-[0.14em] text-warn uppercase">
               <FlaskConical aria-hidden className="size-4" /> Testnet demo run
             </p>
@@ -200,13 +210,18 @@ export function SessionPanel() {
               variant="primary"
               size="lg"
               className="w-full"
-              disabled={!idle || !hasWallet || !wallet.onExpectedChain || Boolean(selection.blocked)}
+              disabled={!demoOffered || !idle || !hasWallet || !wallet.onExpectedChain || Boolean(selection.blocked)}
               icon={<FlaskConical aria-hidden className="size-4" />}
               onClick={() => void startDemoRun()}
             >
               Demo run (1 km+)
             </Button>
-            {!hasWallet && (
+            {demoOffReason && (
+              <p role="status" className="text-xs leading-relaxed text-warn" data-demo-off-reason>
+                {demoOffReason} Turning it on is a deliberate, server-side step: see docs/DEPLOYMENT.md.
+              </p>
+            )}
+            {demoOffered && !hasWallet && (
               <div className="space-y-2">
                 <p className="text-xs text-warn">A demo account has no wallet, so nothing can be sent from it. Connect a wallet to record the demo trip on-chain.</p>
                 <Button variant="secondary" size="sm" loading={wallet.connecting} icon={<Wallet aria-hidden className="size-3.5" />} onClick={() => void wallet.connect()}>
@@ -214,7 +229,7 @@ export function SessionPanel() {
                 </Button>
               </div>
             )}
-            {hasWallet && !wallet.onExpectedChain && <p className="text-xs text-warn">Switch your wallet to {PORTAL_V3.name} first.</p>}
+            {demoOffered && hasWallet && !wallet.onExpectedChain && <p className="text-xs text-warn">Switch your wallet to {PORTAL_V3.name} first.</p>}
           </div>
         )}
 

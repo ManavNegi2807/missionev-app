@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { AlertTriangle, CheckCircle2, CircleDashed, Coins, ExternalLink, FlaskConical, Fuel, Link2, Loader2, PenLine, ShieldCheck, Wallet, XCircle } from "lucide-react";
 import { Alert, Badge, Button, KV, Panel } from "@/components/ui/primitives";
 import { useIntegrationStatus } from "@/lib/api/client";
@@ -43,6 +43,13 @@ export function LedgerPanel() {
   const [busy, setBusy] = useState<"sign" | "send" | null>(null);
   // 0 until mounted: reading the clock during render would freeze it into the prerendered page.
   const [now, setNow] = useState(0);
+  // The contract address comes from a NEXT_PUBLIC_ value that is fixed into each bundle, so the server render and the browser can
+  // disagree (a stale build, or a different environment). Show it only after mount so the two renders always match.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const cs = contractStatus();
   const s = record?.settlement;
   const carbon = record?.carbon ?? null;
@@ -98,7 +105,7 @@ export function LedgerPanel() {
             {(wallet.isConnected ? wallet.chainId : record?.wallet.chainId) ?? "—"} <span className="text-muted">/ {PORTAL_V3.chainId}</span>
           </KV>
           <KV label="Contract">
-            <span className={cs.kind === "address-set" ? "text-ok" : "text-warn"}>{cs.kind === "address-set" ? shortAddress(CONTRACT.address) : cs.label}</span>
+            {mounted ? <span className={cs.kind === "address-set" ? "text-ok" : "text-warn"}>{cs.kind === "address-set" ? shortAddress(CONTRACT.address) : cs.label}</span> : <span className="text-muted">…</span>}
           </KV>
         </dl>
 
