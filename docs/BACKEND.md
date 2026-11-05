@@ -9,6 +9,7 @@ environment variables (`src/server/config.ts`); none carries a `NEXT_PUBLIC_` pr
 |---|---|---|---|
 | `/api/status` | GET | What the server has configured, never the secrets; `mode` is `LIVE` only when contract address, RPC URL and oracle key are all set | Read at request time |
 | `/api/chain` | GET | A live, read-only look at Portal V3 and the deployed contract: newest block and its age, contract code size, token, total $MEV supply, oracle signer, owner, and whether the EIP-712 domain matches. Needs no key and sends nothing; says so plainly when the public RPC is down | Works with no configuration (falls back to the public deployment); cached for 15 s to spare the shared RPC |
+| `/api/activity` | GET | The latest (up to 10) `recordCommute` outcomes, read from the contract's `CommuteVerified` and mint `Transfer` logs: short wallet, mode, CO2 avoided, exact $MEV minted, block time, link. No key, nothing sent. Cached 15 s (4 s on failure) like `/api/chain`; searches newest-first in block windows and retries with smaller ones if the RPC caps the range | Always HTTP 200: `verdict` is `ok`, `empty` (and whether the whole history was searched) or `unreachable`. It never invents rows |
 | `/api/trips/calculate` | POST | The shared carbon engine as a service; signs and changes nothing | |
 | `/api/trips/verify` | POST | Runs the oracle's checks on trip evidence without signing | The wallet proof is ignored here |
 | `/api/sign-trip` | POST | **The verifier node (oracle signer).** Re-verifies, calculates the CO2 avoided itself and signs the exact EIP-712 `TripPayload` for chain 420420777 | 20 per minute per IP; body up to 2 MB |
@@ -32,16 +33,16 @@ It then applies these rules in order and returns the first that fails:
 |---|---|---|
 | 1 | The server is configured (contract, RPC, oracle key) | 503 `unavailable` |
 | 2 | The wallet proof matches this commuter, trip, contract and chain, is under 5 minutes old, and was signed by the commuter's address | 401 `unauthorized` |
-| 3 | The trip is real GPS, not simulated | 422 `refused` |
+| 3 | The trip is real GPS. A simulated trip is refused, unless `DEMO_SIGNING` is on (see below) | 422 `refused` |
 | 4 | The reported distance is within 10% of the distance the server computes from the samples | 422 `refused` |
 | 5 | The verification checks pass (vehicle profile, ride log, motion, route) | 422 `refused`, with the failed checks |
 | 6 | The carbon engine can calculate the journey | 400 `invalid` |
 | 7 | The reward policy allows it: a clean mode the contract knows, and more than 0 g avoided. Petrol, diesel and CNG are never rewarded | 422 `refused`, with the calculation |
-| 8 | The commuter is under the daily limit (default 8 signed journeys a UTC day) | 429 `rate-limited` |
+| 8 | The commuter is under the daily limit (default 8 signed journeys a UTC day) and, for a demo trip, under the per-wallet demo cap | 429 `rate-limited` |
 | 9 | The configured key is the contract's oracle signer, and the trip is not already in `processedTrips` | 503 `unavailable` / 409 `duplicate` |
 | 10 | The nonce is read from the chain and the payload is signed with a deadline (default 600 s, at most 3600 s) | 200 `signed` |
 
-Only values the server derived itself are signed. The private key is read from `ORACLE_PRIVATE_KEY` and never leaves the process.
+Only values the server derived itself are signed. A successful response carries `demo: false`, or `demo: true` for a testnet demo trip. The private key is read from `ORACLE_PRIVATE_KEY` and never leaves the process.
 
 ## Configuration
 
@@ -51,9 +52,33 @@ Only values the server derived itself are signed. The private key is read from `
 | `MISSIONEV_CONTRACT_ADDRESS` | server only (falls back to the public one) | LIVE |
 | `PORTAL_RPC_URL` | server only (falls back to the public one) | LIVE: nonce and state reads |
 | `ORACLE_SIGNATURE_TTL_SECONDS`, `ORACLE_MAX_TRIPS_PER_DAY` | server only | Optional tuning |
+| `DEMO_SIGNING` | server only | Off unless exactly `true`/`1`. The authority for the testnet demo trip path |
+| `DEMO_MAX_TRIPS_PER_WALLET` | server only | Demo trips per wallet per UTC day (default 3) |
+| `NEXT_PUBLIC_DEMO_SIGNING` | public, UI label only | Shows the Demo run button. Grants nothing |
 
 DEMO versus LIVE is decided in one place: a journey is LIVE only if it was captured with real GPS, the server reports `LIVE`, and a real
 wallet is connected on chain 420420777. A DEMO result is never presented as an on-chain transaction.
+
+## Testnet demo trips (`DEMO_SIGNING`)
+
+Off by default. With it off, rule 3 refuses every simulated trip exactly as before. With it on, a trip whose source is `simulated` may be
+signed **only if all of this holds**; everything else in the table above still applies unchanged:
+
+1. A wallet proof is present, fresh and signed by the commuter address (rule 2). The no-wallet demo account has nothing to sign with.
+2. The server recomputes the distance from the submitted samples and uses the lower of that and the reported one (rule 4); the carbon
+   engine recomputes the CO2 (rule 6). Client figures are never signed.
+3. That distance is at least 1000 m (`DEMO_MIN_DISTANCE_M`).
+4. The reward policy allows it (rule 7): petrol, diesel and CNG trips and zero-saving trips are refused.
+5. The per-IP limit, the daily cap (rule 8) and the per-wallet demo cap all pass. Only a *signed* trip counts toward the caps.
+
+The trip id is `deriveTripId` over `missionev-demo:<clientTripId>`: still a deterministic `bytes32`, so a retry is idempotent and the
+contract's `processedTrips` blocks a replay. A real `clientTripId` can't contain a colon, so a demo id can never equal a GPS trip's id.
+The oracle's in-memory log marks the trip `demo: true`, and the response carries `demo: true` (and the signed object `demo: true`). The
+key is never logged or returned.
+
+The server reports `demoSigning` in `GET /api/status` only when it is also LIVE; the interface offers the button only when the public flag
+and that report agree and a real wallet is connected. The server flag is the authority: a browser that sends a simulated trip to a server
+with the flag off is refused.
 
 ## Data and privacy rules
 

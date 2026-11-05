@@ -19,7 +19,9 @@ commuter's own wallet submits. Built for the Portaldot Hacker House 2026.
 | Smart contract | **Live on Portal V3 testnet and verified**: [`0x0904…fc82`](#deployed-on-portal-v3-testnet) |
 | Web app | **Live demo: https://missionev-app.vercel.app** (DEMO mode, clearly labelled, no keys on the server). Also runs locally. LIVE needs a server with the oracle key (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)) |
 | Tests | 100+ passing, including the compiled contract executed in an in-process EVM; CI runs lint, type-check, tests and build |
-| Not yet | A first `recordCommute` transaction sent from the web app to the deployed contract |
+| Testnet Demo Trip | A **flag-gated, off-by-default** path (`DEMO_SIGNING`) for showing a real testnet transaction without driving: a synthetic trip of at least 1 km that the oracle still re-verifies. Every such trip is labelled, in the app and in history, as not real travel. **Off on the hosted site.** See [DEMO and LIVE](#demo-and-live) |
+| Recent on-chain activity | A read-only panel on the landing page: the latest `recordCommute` outcomes read from the contract's event logs (`GET /api/activity`). It shows only what the chain returns, so while no transaction exists it says so |
+| Not yet | A first `recordCommute` transaction sent from the web app to the deployed contract. The Demo run was exercised only against a local in-memory chain with the real contract, not against Portal V3 and not with the MetaMask extension |
 | Honesty | Sign-in is a MetaMask connection (or a labelled demo account); redemptions are simulated and community analytics are synthetic. See [real versus simulated](docs/INTEGRATION_REPORT.md) |
 
 ## For judges: the evidence, by criterion
@@ -180,8 +182,23 @@ owner and the EIP-712 domain check. It is read-only, needs no wallet or key, and
 
 The app is **DEMO** (everything labelled, nothing on-chain) until the server has `MISSIONEV_CONTRACT_ADDRESS`, `PORTAL_RPC_URL` and
 `ORACLE_PRIVATE_KEY`. A journey is **LIVE** only if it was captured with real GPS, the server is configured, and a real wallet is
-connected on Portal V3 (chain 420420777). Simulated trips are never signed, and a DEMO result is never presented as an on-chain
-transaction. `GET /api/status` shows what is configured, never the secrets.
+connected on Portal V3 (chain 420420777). A DEMO result is never presented as an on-chain transaction. `GET /api/status` shows what is
+configured, never the secrets.
+
+**Simulated trips are never signed, with one flag-gated exception: the Testnet Demo Trip.** It exists so a reviewer or a demo video can
+show a real testnet transaction without driving. It is **off by default** and meant for a *separate* demo deployment, not the main site:
+
+* The server flag `DEMO_SIGNING=true` is the authority. `NEXT_PUBLIC_DEMO_SIGNING=true` only makes the interface offer the button.
+* It needs a real wallet on Portal V3 and the same fresh wallet proof as any trip. The no-wallet demo account can never reach the chain.
+* The oracle still recomputes distance and CO2 itself from the samples, needs at least 1 km, applies the same reward policy (petrol,
+  diesel and CNG are never signed), the same rate limits and daily cap, plus a per-wallet demo cap (`DEMO_MAX_TRIPS_PER_WALLET`, default 3 a day).
+* The trip id is derived from a `missionev-demo:` prefix, so the oracle can tell demo trips apart off-chain, and it stays an ordinary
+  `bytes32` the contract's `processedTrips` guard handles. The response carries `demo: true`.
+* In the app it is the **Demo run (1 km+)** card on Screen 02: pick a mode, press the button, and a synthetic trip stops itself at about
+  1.2 km and verifies itself. One more button asks the oracle and your wallet to record it. It is labelled **TESTNET DEMO TRIP: synthetic
+  distance, not GPS-verified. The transaction is real; the trip is not.** and shows as **DEMO · ON-CHAIN** in trip history.
+
+The on-chain record cannot tell a demo trip from a real one, so the on-chain activity panel says so too.
 
 ## Features
 
@@ -227,8 +244,8 @@ Solidity 0.8 compiled with solc-js 0.8.34, vitest with `@ethereumjs/vm`. Full li
 
 Copy `.env.example` to `.env.local`. It already holds the public values of the deployment (contract address, RPC URL, tPOT symbol); every
 secret is blank. **Server-only** (never `NEXT_PUBLIC_`): `ORACLE_PRIVATE_KEY`, `MISSIONEV_CONTRACT_ADDRESS`, `PORTAL_RPC_URL`,
-`ORACLE_SIGNATURE_TTL_SECONDS`, `ORACLE_MAX_TRIPS_PER_DAY`. **Public:** `NEXT_PUBLIC_MEV_CONTRACT_ADDRESS`, `NEXT_PUBLIC_PORTAL_RPC_URL`,
-`NEXT_PUBLIC_PORTAL_CURRENCY_SYMBOL`, `NEXT_PUBLIC_PORTAL_EXPLORER_URL`, and the optional `NEXT_PUBLIC_GOOGLE_MAPS_KEY` (visible to every
+`ORACLE_SIGNATURE_TTL_SECONDS`, `ORACLE_MAX_TRIPS_PER_DAY`, `DEMO_SIGNING`, `DEMO_MAX_TRIPS_PER_WALLET` (the last two default to off and 3). **Public:** `NEXT_PUBLIC_MEV_CONTRACT_ADDRESS`, `NEXT_PUBLIC_PORTAL_RPC_URL`,
+`NEXT_PUBLIC_PORTAL_CURRENCY_SYMBOL`, `NEXT_PUBLIC_PORTAL_EXPLORER_URL`, `NEXT_PUBLIC_DEMO_SIGNING` (a label only; it grants nothing), and the optional `NEXT_PUBLIC_GOOGLE_MAPS_KEY` (visible to every
 visitor: restrict it by domain). Receipt OCR needs no setting. Use a **fresh** oracle key whose address is the contract's oracle signer.
 
 ## Testing
@@ -298,6 +315,14 @@ overrides); charts and the map read the variables.
 * One oracle key signs rewards, and the owner can replace it; GPS comes from the commuter's own browser and can be spoofed.
 * The web app has been driven with a mock wallet, not yet with MetaMask against the deployed contract. The verifier node's signature has been
   accepted by the deployed contract in a simulation (nothing sent), but no real `recordCommute` transaction exists yet.
+* **Testnet demo trips are not real travel.** Where `DEMO_SIGNING` is on, a wallet can record a synthetic trip on-chain; the transaction is
+  real and the journey is not. The contract cannot tell the difference, so anything that counts on-chain activity should read this
+  README first. The hosted site keeps the flag off. A per-wallet cap and the daily cap limit abuse but are in process memory, so a
+  restart forgets them; an attacker with many wallets is bounded only by the oracle wallet's and the contract's own limits.
+* The Demo run and the activity panel were verified with a mock wallet against a local in-memory chain running the real contract (and the
+  panel's reader against the public RPC's shape through fakes). Neither has been run against Portal V3 or with the MetaMask extension.
+* The activity panel scans the event logs in block windows and retries with smaller ones if the public RPC caps the range. If the RPC
+  refuses all of them it says so instead of showing rows.
 * A `recordCommute` call is estimated at about 35 tPOT on the testnet at the gas price seen on 4 November, paid by the commuter's wallet. Real
   users would need sponsored gas, batching or a fee rebate (see [`docs/BUSINESS.md`](docs/BUSINESS.md)).
 
@@ -309,11 +334,16 @@ overrides); charts and the map read the variables.
   contract integration and audit, tests, deploy and verify tooling, the testnet deployment, and the documentation.
 * **Supplied or carried over:** `contracts/MissionEV.sol` was supplied as the project's contract and is unchanged apart from one comment line removed from its header; the reference-journey
   constants (petrol car 18 km/l, petrol two-wheeler 50 km/l) were carried over from an earlier prototype.
-* **Simulated or mocked:** demo accounts, community analytics, redemptions, and any trip captured in Simulated mode. Each is labelled in the UI.
+* **Simulated or mocked:** demo accounts, community analytics, redemptions, and any trip captured in Simulated mode, including a flag-gated
+  testnet demo trip. Each is labelled in the UI.
+* **Changed close to the freeze (5 November 2026, before the 6 November 04:00 UTC code freeze).** A flag-gated Testnet Demo Trip path, a
+  read-only recent-activity panel, and copy fixes. The demo path is off by default and off on the hosted site, so the submitted behaviour
+  is unchanged unless the owner turns it on. Details and commits: [`docs/HACKATHON_CHECKLIST.md`](docs/HACKATHON_CHECKLIST.md).
 * **Third-party code, data and services:** [`THIRD_PARTY.md`](THIRD_PARTY.md).
 * **AI assistance.** Much of the work after the first front-end commit was written with Claude Code, Anthropic's coding agent, working in
   this repository under the developer's direction (commits carry a `Co-Authored-By` trailer). The contract deployment was run by the
-  developer on their own machine with their own keys.
+  developer on their own machine with their own keys. The 5 November additions above were also written with Claude Code, from a written
+  brief by the developer, and tested with the commands in [Testing](#testing); the developer reviews them before relying on them.
 
 ## Roadmap
 

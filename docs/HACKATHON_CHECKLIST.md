@@ -66,6 +66,29 @@ Read from the event page on 4 November 2026 (84 submissions and 225 registered h
 * Testnet tokens are distributed to a **native POT address (SS58, starting with 5)**, not a `0x` address. If you still need tokens, open a
   support ticket with a screenshot of your registration, or DM the admins named on the event page. Never share a seed phrase or private key.
 
+## Change log close to the freeze: 5 November 2026
+
+Made on **5 Nov 2026**, one day before the freeze (6 Nov 04:00 UTC) and therefore after the "nothing structural after 5 Nov 04:00 UTC"
+rule of thumb above. It is recorded here instead of being tucked away. The structural risk is contained: the new signing path is **off by
+default and off on the hosted site**, so what was submitted behaves as before unless the owner turns it on in a separate deployment.
+
+**What changed, and why.** Real on-chain transactions needed a real-GPS trip captured while moving, so the demo video and judge review had
+no way to show one. The organisers value real testnet interactions.
+
+| Commit | Change |
+|---|---|
+| `68f6c3f` feat(oracle) | `DEMO_SIGNING` (server, default off): the oracle may sign a *simulated* trip only for a real wallet that passes the fresh proof check, after recomputing distance and CO2, for at least 1 km, under the unchanged reward policy, the usual limits and a per-wallet demo cap. `missionev-demo:` trip-id prefix; `demo: true` in the response. Tests for flag off, flag on, under 1 km, petrol/diesel/CNG, no wallet, caps |
+| `c32b652` feat(landing) | Read-only "Recent on-chain activity" panel and `GET /api/activity` (event logs via viem; handles RPC failure, an empty chain, range caps) |
+| `d01b819` feat(trip) | "Demo run (1 km+)" card, self-stopping and self-verifying synthetic trip on the existing x40 clock, persistent TESTNET DEMO TRIP banner, distinct DEMO · ON-CHAIN history badge |
+| `861745c` fix(copy) | Hero badge now says "Contract live on Portal V3 testnet" (the app itself is in DEMO); nine journey modes everywhere (the engine calculates nine; the profile adds an "other" that cannot be calculated); `missionev-app.vercel.app` replaces `missionev.vercel.app` throughout |
+
+The contract, the deployment record and the chain constants are untouched; the real-GPS path, reward policy, wallet-proof check and replay
+protection are not weakened. No dependency was added.
+
+**How it was checked.** `npm run lint`, `npm run typecheck`, `npm test` (the new oracle tests run the compiled contract) and
+`npm run build`; `e2e/demo-run.mjs` drives the whole Demo run in a real browser against the local in-memory chain with the real contract
+and a mock wallet. **Not tested:** the MetaMask extension, and Portal V3 itself. No real `recordCommute` transaction exists yet.
+
 ## After the code freeze
 
 Fix only serious bugs, tell the organisers, and write each one down here (what broke, what changed, the commit).

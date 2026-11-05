@@ -101,6 +101,27 @@ Any Node host for Next.js works (for example Vercel). Two things to know: the or
 memory, so on a serverless host each instance has its own (the on-chain `processedTrips` flag still prevents double minting); and the
 sign-in is a wallet connection with no server session, so a public site is a demo, not a production login.
 
+## A separate demo deployment with Testnet Demo Trips (optional)
+
+Real on-chain transactions normally need a real-GPS trip captured while moving. To record a demo video or let a reviewer see a real
+testnet transaction, run a **second** Vercel project from the same repository, and leave the main site in DEMO:
+
+1. Create a **fresh** oracle key (never one that has appeared in a chat, commit or screenshot) and note its address.
+2. Make that address the contract's oracle signer for the deployment you will demo against. The deployed contract's oracle signer is the
+   address in the deployment record; replacing it is an owner-only transaction, and it would stop the main site's key from signing. So
+   either use a contract deployed for the demo, or accept that the demo key replaces the main one. Do **not** put the main key in the
+   demo project.
+3. In the demo project's dashboard (typed there by you, never in chat), set the server-only variables `ORACLE_PRIVATE_KEY`,
+   `MISSIONEV_CONTRACT_ADDRESS`, `PORTAL_RPC_URL` and `DEMO_SIGNING=true`, and the public `NEXT_PUBLIC_MEV_CONTRACT_ADDRESS`,
+   `NEXT_PUBLIC_PORTAL_RPC_URL` and `NEXT_PUBLIC_DEMO_SIGNING=true`. Optionally `DEMO_MAX_TRIPS_PER_WALLET`.
+4. Check `/api/status` on that project reports `"mode":"LIVE"` and `"demoSigning":true`, and that the main site still reports
+   `"mode":"DEMO"` and `"demoSigning":false`.
+5. Connect MetaMask on Portal V3, pick a rewardable mode (EV, metro, e-bus, walking or cycling), press **Demo run (1 km+)**, then the
+   sign-and-record button, and confirm the transaction in the wallet (it costs tPOT gas). Every such trip is labelled as not real travel.
+
+Turn it off by removing `DEMO_SIGNING` (the server stops signing simulated trips at once) and, ideally, rotating the oracle key. See
+[`SECURITY.md`](../SECURITY.md) for the risk and its mitigations.
+
 ## Notes for other builders on Portal V3
 
 Observed while deploying this contract (3 November 2026):
