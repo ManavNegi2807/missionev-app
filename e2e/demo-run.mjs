@@ -77,6 +77,7 @@ check("the app under test is LIVE with demo signing on (local chain, throwaway o
   await page.getByRole("button", { name: /Save transport profile/ }).click();
   await page.getByText("Saved", { exact: true }).first().waitFor();
   await page.goto(`${BASE}/capture-trip`, { waitUntil: "networkidle" });
+  await page.locator("[data-demo-run-card]").waitFor({ timeout: 15000 });
   const t = await text(page);
   check("demo account (no wallet): the card asks to connect a wallet, Demo run is disabled, no banner", (await page.locator("[data-demo-run-card]").count()) === 1 && /Connect wallet to record on-chain/i.test(t) && (await page.getByRole("button", { name: "Demo run (1 km+)" }).isDisabled()) && !/TESTNET DEMO TRIP/.test(t));
   await browser.close();

@@ -14,7 +14,7 @@ import {
 import { keccak256, toHex } from "viem";
 import { loadStatus, postJson } from "@/lib/api/client";
 import { calculateJourney, JourneyInputError } from "@/lib/carbon/emissionsEngine";
-import { mevNumber, mintedInReceipt, readCommuterOnChain, readNonce, sendRecordCommute, waitForReceipt } from "@/lib/contract/client";
+import { commuteVerifiedIn, hasContractCode, mevNumber, mintedInReceipt, readCommuterOnChain, readNonce, sendRecordCommute, waitForReceipt } from "@/lib/contract/client";
 import { CONTRACT, isContractAddress } from "@/lib/contract/config";
 import { PORTAL_V3 } from "@/lib/chain";
 import { DEMO_RUN_KM, demoSigningUi } from "@/lib/oracle/demo";
@@ -644,6 +644,14 @@ export function TripProvider({ children }: { children: ReactNode }) {
       /* the transaction itself will fail loudly if the chain is unreachable */
     }
 
+    // Never spend gas on a call that can't do anything: the contract address must have code on the chain the wallet is on.
+    try {
+      if (!(await hasContractCode(w.request, signed.contract))) {
+        return patchSettlement({ phase: "signed", tx: { status: "error", error: `There is no contract at ${signed.contract} on the network your wallet is using, so nothing was sent. This app is configured for a different network or address than your wallet. Check NEXT_PUBLIC_MEV_CONTRACT_ADDRESS and that your wallet is on ${PORTAL_V3.name}.` } });
+      }
+    } catch {
+      /* if the check itself fails, the transaction below will fail loudly */
+    }
     patchSettlement({ phase: "wallet-pending", tx: { status: "awaiting-wallet" } });
     let hash: string;
     try {
@@ -656,6 +664,9 @@ export function TripProvider({ children }: { children: ReactNode }) {
     if (!receipt) return patchSettlement({ tx: { status: "pending", hash, error: "Still waiting for a receipt. Check the explorer, then reload this page." } });
     if (receipt.status === "reverted") {
       return patchSettlement({ phase: "failed", tx: { status: "reverted", hash, blockNumber: receipt.blockNumber, error: "The contract rejected the transaction (the signature may be stale, expired or the trip already recorded)." } });
+    }
+    if (!commuteVerifiedIn(receipt, signed.contract, w.address)) {
+      return patchSettlement({ phase: "failed", tx: { status: "error", hash, blockNumber: receipt.blockNumber, error: "The transaction was mined, but the contract emitted no CommuteVerified event for your wallet, so nothing was recorded and nothing was minted. Do not treat this hash as a recorded journey." } });
     }
     // Exact amounts come from the receipt and the contract, never from the event's truncated pointsMinted.
     const minted = mintedInReceipt(receipt, signed.contract, w.address);

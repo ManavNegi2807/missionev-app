@@ -89,6 +89,29 @@ export function mintedInReceipt(receipt: Receipt, contract: string, user: string
   return total;
 }
 
+/**
+ * Whether this receipt really recorded a commute: a `CommuteVerified` event, emitted BY the contract, for this user. A mined
+ * transaction with status 0x1 is not enough: a call to an address with no contract code also "succeeds" and emits nothing.
+ */
+export function commuteVerifiedIn(receipt: Receipt, contract: string, user: string): boolean {
+  for (const log of receipt.logs) {
+    if (log.address.toLowerCase() !== contract.toLowerCase()) continue;
+    try {
+      const ev = decodeEventLog({ abi: MISSIONEV_ABI, data: log.data, topics: log.topics as [Hex, ...Hex[]] });
+      if (ev.eventName === "CommuteVerified" && ev.args.commuter.toLowerCase() === user.toLowerCase()) return true;
+    } catch {
+      /* not a MissionEV event */
+    }
+  }
+  return false;
+}
+
+/** True when the node reports contract code at the address. A false here means a transaction to it would do nothing. */
+export async function hasContractCode(req: Req, address: string): Promise<boolean> {
+  const code = await req("eth_getCode", [address, "latest"]);
+  return typeof code === "string" && code !== "0x" && code.length > 2;
+}
+
 /** Native (tPOT) balance in wei, straight from eth_getBalance. A different currency from $MEV. */
 export async function readGas(req: Req, user: string): Promise<string> {
   const h = await req("eth_getBalance", [user, "latest"]);
