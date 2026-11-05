@@ -92,6 +92,8 @@ export interface SignedTrip {
   contract: string;
   chainId: number;
   signedAt: number;
+  /** Set only by a flag-gated "testnet demo trip": the distance was synthetic and the trip was never GPS-verified. */
+  demo?: true;
 }
 
 /**
@@ -152,6 +154,8 @@ export interface TripRecord {
   vehicle: TripVehicle | null;
   rideHail: RideHailInfo | null;
   wallet: { address: string; chainId: number | null; mode: "browser" | "demo" };
+  /** Started with the "Demo run" button: a synthetic trip that may be signed for the testnet when the server allows it. */
+  demoRun?: boolean;
   userId: string;
   verification: { checks: Record<CheckId, CheckResult>; trust: TrustResult } | null;
   /** The full carbon calculation (factors, formulas, sources, assumptions). */

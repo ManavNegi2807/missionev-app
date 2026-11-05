@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       nonce: outcome.signed.nonce,
       deadline: outcome.signed.deadline,
       signedAt: outcome.signed.signedAt,
+      demo: outcome.demo,
     });
   }
   const { httpStatus, ...rest } = outcome;

@@ -16,6 +16,7 @@ export interface SignedLogEntry {
   nonce: string;
   deadline: number;
   signedAt: number;
+  demo: boolean;
 }
 
 const store: SignStore = createMemoryStore();

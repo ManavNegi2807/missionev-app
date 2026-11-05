@@ -1,3 +1,4 @@
+import { DEMO_TRIP_ID_PREFIX } from "./demo";
 import { encodeAbiParameters, keccak256, parseAbiParameters, type Hex } from "viem";
 
 /**
@@ -73,3 +74,11 @@ export function deriveTripId(args: { commuter: Hex; clientTripId: string; starte
     ]),
   );
 }
+
+/**
+ * The trip id of a "testnet demo trip": the same derivation with the client's trip id prefixed by `missionev-demo:`. It stays a
+ * deterministic bytes32 (a retried request is idempotent and the contract's `processedTrips` still blocks a replay), and the
+ * oracle can tell off-chain, by recomputing it, which ids it issued for demo trips. It cannot collide with a GPS trip's id:
+ * the colon is outside what a `clientTripId` may contain (word characters and dashes only).
+ */
+export const deriveDemoTripId = (args: Parameters<typeof deriveTripId>[0]): Hex => deriveTripId({ ...args, clientTripId: `${DEMO_TRIP_ID_PREFIX}${args.clientTripId}` });

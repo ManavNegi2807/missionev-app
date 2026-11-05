@@ -10,6 +10,8 @@ import { PORTAL_V3 } from "@/lib/chain";
  *   PORTAL_RPC_URL                JSON-RPC endpoint for nonce and state reads (falls back to NEXT_PUBLIC_PORTAL_RPC_URL)
  *   ORACLE_SIGNATURE_TTL_SECONDS  how long a signature stays valid (default 600)
  *   ORACLE_MAX_TRIPS_PER_DAY      signatures per commuter per UTC day (default 8)
+ *   DEMO_SIGNING                  "true" lets the oracle sign clearly-labelled SYNTHETIC "testnet demo trips" (default off)
+ *   DEMO_MAX_TRIPS_PER_WALLET     demo trips signed per wallet per UTC day, on top of the daily cap above (default 3)
  */
 export interface ServerConfig {
   chainId: number;
@@ -18,6 +20,9 @@ export interface ServerConfig {
   oracleKey: Hex | null;
   signatureTtlSeconds: number;
   maxTripsPerDay: number;
+  /** Authority for the demo path. Off by default: simulated trips are then never signed. */
+  demoSigning: boolean;
+  demoMaxTripsPerWallet: number;
 }
 
 const isAddress = (s: string | undefined): s is Hex => Boolean(s && /^0x[0-9a-fA-F]{40}$/.test(s));
@@ -34,6 +39,8 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     oracleKey: isKey(env.ORACLE_PRIVATE_KEY) ? env.ORACLE_PRIVATE_KEY : null,
     signatureTtlSeconds: Math.min(3600, posInt(env.ORACLE_SIGNATURE_TTL_SECONDS, 600)),
     maxTripsPerDay: posInt(env.ORACLE_MAX_TRIPS_PER_DAY, 8),
+    demoSigning: /^(1|true)$/i.test(env.DEMO_SIGNING ?? ""),
+    demoMaxTripsPerWallet: posInt(env.DEMO_MAX_TRIPS_PER_WALLET, 3),
   };
 }
 
@@ -44,6 +51,8 @@ export interface IntegrationStatus {
   contract: { configured: boolean; address: string | null };
   rpc: { configured: boolean };
   oracle: { configured: boolean };
+  /** Whether this server will sign synthetic "testnet demo trips". Only true when the mode is LIVE as well. */
+  demoSigning: boolean;
   /** Receipt OCR needs no server settings: Tesseract.js runs in the browser and the image never reaches the server. */
   ocr: { engine: "tesseract.js"; runsIn: "browser" };
   missing: string[];
@@ -61,6 +70,7 @@ export function integrationStatus(cfg: ServerConfig): IntegrationStatus {
     contract: { configured: Boolean(cfg.contract), address: cfg.contract },
     rpc: { configured: Boolean(cfg.rpcUrl) },
     oracle: { configured: Boolean(cfg.oracleKey) },
+    demoSigning: cfg.demoSigning && missing.length === 0,
     ocr: { engine: "tesseract.js", runsIn: "browser" },
     missing,
   };

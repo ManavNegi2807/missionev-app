@@ -32,7 +32,7 @@ async function env(overrides: Partial<ServerConfig> = {}, signerOnChain: Hex = o
       return { carbonScore: Number(carbonScore), streakDays: Number(streakDays), lastTripTimestamp: Number(lastTripTimestamp), totalAvoidedGramsCO2: Number(totalAvoidedGramsCO2), totalTripsLogged: Number(totalTripsLogged), balanceWei };
     },
   };
-  const config: ServerConfig = { chainId: chain.chainId, contract, rpcUrl: "http://unused.local", oracleKey, signatureTtlSeconds: 600, maxTripsPerDay: 8, ...overrides };
+  const config: ServerConfig = { chainId: chain.chainId, contract, rpcUrl: "http://unused.local", oracleKey, signatureTtlSeconds: 600, maxTripsPerDay: 8, demoSigning: false, demoMaxTripsPerWallet: 3, ...overrides };
   return { chain, contract, config, reader, deps: { config, reader, store: createMemoryStore(), now: () => chain.now * 1000 } };
 }
 
@@ -201,6 +201,114 @@ describe("oracle: sign → the commuter's own wallet submits → the contract mi
     expect(await evaluateAndSign(await request(noKey), noKey.deps)).toMatchObject({ status: "unavailable", httpStatus: 503, reason: expect.stringContaining("ORACLE_PRIVATE_KEY") });
     const mismatch = await env({}, privateKeyToAccount(generatePrivateKey()).address);
     expect(await evaluateAndSign(await request(mismatch), mismatch.deps)).toMatchObject({ status: "unavailable", reason: expect.stringContaining("oracle signer") });
+  });
+});
+
+describe("testnet demo trips (DEMO_SIGNING)", () => {
+  const demoReq = (e: Env, who = privateKeyToAccount(generatePrivateKey()), over: Partial<SignRequest["trip"]> = {}) => request(e, who, { source: "simulated", mode: "metro", vehicle: null, ...over });
+
+  it("with the flag OFF (the default) a simulated trip is refused exactly as before, and nothing is signed", async () => {
+    const e = await env();
+    expect(e.config.demoSigning).toBe(false);
+    expect(await evaluateAndSign(await demoReq(e), e.deps)).toMatchObject({ status: "refused", httpStatus: 422, reason: "Simulated trips are demo data and are never signed." });
+  });
+
+  it("with the flag ON a clean simulated trip of at least 1 km is signed, marked demo: true, and the real contract accepts it", async () => {
+    const e = await env({ demoSigning: true });
+    const who = privateKeyToAccount(generatePrivateKey());
+    const out = await evaluateAndSign(await demoReq(e, who), e.deps);
+    if (out.status !== "signed") throw new Error(`${out.status}: ${out.reason}`);
+    expect(out.demo).toBe(true);
+    expect(out.signed.demo).toBe(true);
+    expect(out.distanceKmUsed).toBeGreaterThanOrEqual(1);
+    expect(out.signed.distanceMeters).toBeGreaterThanOrEqual(1000);
+    expect(out.signed.mode).toBe(TRANSPORT_MODE.METRO);
+    expect(await commuterSend(e, who.address, out.signed)).toMatchObject({ ok: true });
+    // the contract's own replay guard still holds for the demo trip id
+    expect(await e.reader.isTripProcessed(out.signed.tripId as Hex)).toBe(true);
+    expect(await commuterSend(e, who.address, out.signed)).toMatchObject({ ok: false });
+  });
+
+  it("GPS trips are never marked demo, and a demo trip id differs from the GPS derivation of the same trip", async () => {
+    const e = await env({ demoSigning: true });
+    const who = privateKeyToAccount(generatePrivateKey());
+    const sim = await demoReq(e, who);
+    const gps: SignRequest = { ...sim, trip: { ...sim.trip, source: "gps" } };
+    const a = await evaluateAndSign(sim, e.deps);
+    const b = await evaluateAndSign(gps, e.deps);
+    if (a.status !== "signed" || b.status !== "signed") throw new Error("expected both to sign");
+    expect(a.demo).toBe(true);
+    expect(b.demo).toBe(false);
+    expect(b.signed.demo).toBeUndefined();
+    expect(a.signed.tripId).not.toBe(b.signed.tripId);
+    const again = await evaluateAndSign(sim, e.deps);
+    expect(again.status === "signed" ? again.signed.tripId : again).toBe(a.signed.tripId); // deterministic: a retry is idempotent
+  });
+
+  it("still re-verifies and recomputes: under 1 km is refused, and a distance that disagrees with the samples is refused", async () => {
+    const e = await env({ demoSigning: true });
+    const short = await demoReq(e);
+    short.trip.samples = samples(e.chain.now * 1000 - 295_000, 10);
+    short.trip.distanceKm = pathKm(short.trip.samples);
+    expect(short.trip.distanceKm).toBeLessThan(1);
+    expect(await evaluateAndSign(short, e.deps)).toMatchObject({ status: "refused", reason: expect.stringContaining("at least 1 km") });
+    expect(await evaluateAndSign(await demoReq(e, undefined, { distanceKm: 40 }), e.deps)).toMatchObject({ status: "refused", reason: expect.stringContaining("doesn't match the location samples") });
+  });
+
+  it("the reward policy still applies: petrol, diesel and CNG trips are never signed", async () => {
+    const e = await env({ demoSigning: true });
+    const diesel: VehicleEnergySpec = { ...petrol, powertrain: "diesel" };
+    const cng: VehicleEnergySpec = { body: "car", powertrain: "cng", mileageKmPerUnit: 20, efficiencySource: "user-entered", confidence: "medium", label: "Test CNG" };
+    for (const [mode, spec] of [["private_petrol_car", petrol], ["private_diesel_car", diesel]] as const) {
+      expect(await evaluateAndSign(await demoReq(e, undefined, { mode, vehicle: veh(spec) }), e.deps)).toMatchObject({ status: "refused", reason: expect.stringContaining("not rewarded") });
+    }
+    const cab = (km: number): RideHailInfo => ({ provider: "ola", occupants: 1, receipt: { distanceKm: km, tripDate: null, serviceClass: null, source: "manual", confirmedByUser: true } });
+    const probe = await demoReq(e);
+    expect(await evaluateAndSign(await demoReq(e, undefined, { mode: "ride_hail", vehicle: veh(cng, "ride-hail"), rideHail: cab(probe.trip.distanceKm) }), e.deps)).toMatchObject({ status: "refused", reason: expect.stringContaining("not rewarded") });
+  });
+
+  it("never signs for the no-wallet demo account: it needs a fresh proof from the commuter's own wallet", async () => {
+    const e = await env({ demoSigning: true });
+    const who = privateKeyToAccount(generatePrivateKey());
+    const other = privateKeyToAccount(generatePrivateKey());
+    // a demo account has no wallet, so there is no signature from the commuter address: nothing is signed
+    const forged = await demoReq(e, who);
+    forged.proof.signature = await other.signMessage({ message: forged.proof.message });
+    expect(await evaluateAndSign(forged, e.deps)).toMatchObject({ status: "unauthorized", httpStatus: 401 });
+    const stale = await request(e, who, { source: "simulated", mode: "metro", vehicle: null }, e.chain.now * 1000 - 6 * 60_000);
+    expect(await evaluateAndSign(stale, e.deps)).toMatchObject({ status: "unauthorized", reason: expect.stringContaining("expired") });
+    expect(parseSignRequest({ ...forged, proof: undefined })).toMatchObject({ ok: false, reason: expect.stringContaining("wallet proof") });
+    expect(parseSignRequest({ ...forged, proof: { message: "m", signature: "0x" } })).toMatchObject({ ok: false });
+  });
+
+  it("enforces the per-wallet demo cap and the ordinary daily cap, and a refused trip uses neither", async () => {
+    const e = await env({ demoSigning: true, demoMaxTripsPerWallet: 2 });
+    const who = privateKeyToAccount(generatePrivateKey());
+    await evaluateAndSign(await demoReq(e, who, { mode: "private_petrol_car", vehicle: veh(petrol) }), e.deps); // refused: not counted
+    for (let i = 0; i < 2; i++) expect((await evaluateAndSign(await demoReq(e, who), e.deps)).status).toBe("signed");
+    expect(await evaluateAndSign(await demoReq(e, who), e.deps)).toMatchObject({ status: "rate-limited", httpStatus: 429, reason: expect.stringContaining("demo trips") });
+    // a different wallet has its own demo allowance
+    expect((await evaluateAndSign(await demoReq(e), e.deps)).status).toBe("signed");
+    // GPS trips are not limited by the demo cap
+    expect((await evaluateAndSign(await request(e, who), e.deps)).status).toBe("signed");
+
+    const daily = await env({ demoSigning: true, maxTripsPerDay: 1, demoMaxTripsPerWallet: 5 });
+    const w2 = privateKeyToAccount(generatePrivateKey());
+    expect((await evaluateAndSign(await demoReq(daily, w2), daily.deps)).status).toBe("signed");
+    expect(await evaluateAndSign(await demoReq(daily, w2), daily.deps)).toMatchObject({ status: "rate-limited", reason: expect.stringContaining("Daily limit of 1 signed") });
+  });
+
+  it("reads DEMO_SIGNING from the environment: off unless explicitly true, and only reported as available when LIVE", async () => {
+    const { readConfig, integrationStatus } = await import("@/server/config");
+    const base = { MISSIONEV_CONTRACT_ADDRESS: `0x${"12".repeat(20)}`, PORTAL_RPC_URL: "https://rpc.example", ORACLE_PRIVATE_KEY: `0x${"ab".repeat(32)}` };
+    expect(readConfig({}).demoSigning).toBe(false);
+    expect(readConfig({ DEMO_SIGNING: "false" }).demoSigning).toBe(false);
+    expect(readConfig({ DEMO_SIGNING: "yes please" }).demoSigning).toBe(false);
+    expect(readConfig({ DEMO_SIGNING: "true" }).demoSigning).toBe(true);
+    expect(readConfig({}).demoMaxTripsPerWallet).toBe(3);
+    expect(integrationStatus(readConfig({ DEMO_SIGNING: "true" })).demoSigning).toBe(false); // not LIVE: nothing to sign with
+    expect(integrationStatus(readConfig({ ...base, DEMO_SIGNING: "true" })).demoSigning).toBe(true);
+    expect(integrationStatus(readConfig(base)).demoSigning).toBe(false);
   });
 });
 

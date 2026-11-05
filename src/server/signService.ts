@@ -6,7 +6,8 @@ import { haversineKm } from "@/lib/trip/geo";
 import type { CheckResult, GpsSample, RideHailInfo, SignedTrip, TripVehicle } from "@/lib/trip/types";
 import { assignTrust, checkMotion, checkRoute, checkVehicle, type VerifyContext } from "@/lib/trip/verification";
 import { oracleAddressOf, signTripPayload } from "@/lib/oracle/sign";
-import { deriveTripId } from "@/lib/oracle/typedData";
+import { DEMO_MIN_DISTANCE_M } from "@/lib/oracle/demo";
+import { deriveDemoTripId, deriveTripId } from "@/lib/oracle/typedData";
 import { PROOF_MAX_AGE_MS, oracleRequestMessage } from "@/lib/oracle/walletProof";
 import type { ChainReader } from "./chainReader";
 import type { ServerConfig } from "./config";
@@ -42,7 +43,7 @@ export interface SignRequest {
 }
 
 export type SignOutcome =
-  | { status: "signed"; httpStatus: 200; signed: SignedTrip; carbon: CarbonResult; distanceKmUsed: number; checks: Array<{ id: string; status: string; summary: string }> }
+  | { status: "signed"; httpStatus: 200; /** true only for a flag-gated synthetic "testnet demo trip" */ demo: boolean; signed: SignedTrip; carbon: CarbonResult; distanceKmUsed: number; checks: Array<{ id: string; status: string; summary: string }> }
   | { status: "invalid" | "unauthorized" | "refused" | "duplicate" | "rate-limited" | "unavailable"; httpStatus: number; reason: string; carbon?: CarbonResult; checks?: Array<{ id: string; status: string; summary: string }> };
 
 export interface SignStore {
@@ -121,8 +122,11 @@ export async function evaluateAndSign(req: SignRequest, deps: SignDeps): Promise
   const signer = await recoverMessageAddress({ message: req.proof.message, signature: req.proof.signature }).catch(() => null);
   if (!signer || signer.toLowerCase() !== req.commuter.toLowerCase()) return { status: "unauthorized", httpStatus: 401, reason: "The wallet proof wasn't signed by the commuter address." };
 
-  /* 2 — demo data never goes on-chain */
-  if (t.source === "simulated") return { status: "refused", httpStatus: 422, reason: "Simulated trips are demo data and are never signed." };
+  /* 2 — simulated data is signed only on a server that has DEMO_SIGNING on, and only as a labelled testnet demo trip.
+        Everything below still runs on it: the wallet proof above, the recomputation, the minimum distance, the reward
+        policy, the rate limits and the demo caps. With the flag off nothing changes: it is refused, exactly as before. */
+  const demo = t.source === "simulated";
+  if (demo && !config.demoSigning) return { status: "refused", httpStatus: 422, reason: "Simulated trips are demo data and are never signed." };
 
   /* 3 — re-run verification on the evidence */
   const samples: GpsSample[] = t.samples.map(([lat, lng, tt, speedKmh]) => ({ lat, lng, t: tt, speedKmh }));
@@ -131,6 +135,9 @@ export async function evaluateAndSign(req: SignRequest, deps: SignDeps): Promise
     return { status: "refused", httpStatus: 422, reason: `The reported distance (${t.distanceKm.toFixed(2)} km) doesn't match the location samples (${serverKm.toFixed(2)} km).` };
   }
   const distanceKm = Math.min(t.distanceKm, serverKm); // the lower figure is the safe one to sign
+  if (demo && Math.round(distanceKm * 1000) < DEMO_MIN_DISTANCE_M) {
+    return { status: "refused", httpStatus: 422, reason: `A testnet demo trip must cover at least ${DEMO_MIN_DISTANCE_M / 1000} km, and the samples add up to ${serverKm.toFixed(2)} km. Nothing was signed.` };
+  }
   const ctx: VerifyContext = { tripId: t.clientTripId, source: "gps", scenario: "clean", mode: t.mode, route: null, samples, distanceKm, durationSec: t.durationSec, vehicle: t.vehicle, rideHail: t.rideHail, knownFingerprints: [] };
   // 3.2 is the mock EV-maker log: a browser-demo adapter that proves nothing, so the server doesn't count it.
   const noLog: CheckResult = { id: "3.2", status: "na", isDemo: false, summary: "Not used by the oracle: the EV-maker log is a demo adapter.", items: [], technical: {}, at: null };
@@ -150,9 +157,14 @@ export async function evaluateAndSign(req: SignRequest, deps: SignDeps): Promise
 
   /* 5 — duplicates, limits and chain state */
   const routeDigest = keccak256(toHex(samples.map((s) => `${s.lat.toFixed(5)},${s.lng.toFixed(5)}`).join(";")));
-  const tripId = deriveTripId({ commuter: req.commuter, clientTripId: t.clientTripId, startedAt: Math.floor(t.startedAt), endedAt: Math.floor(t.endedAt), routeDigest });
+  const tripArgs = { commuter: req.commuter, clientTripId: t.clientTripId, startedAt: Math.floor(t.startedAt), endedAt: Math.floor(t.endedAt), routeDigest };
+  const tripId = demo ? deriveDemoTripId(tripArgs) : deriveTripId(tripArgs);
   const day = dayKey(nowMs);
+  const demoKey = `demo:${req.commuter}`;
   if (store.countToday(req.commuter, day) >= config.maxTripsPerDay) return { status: "rate-limited", httpStatus: 429, reason: `Daily limit of ${config.maxTripsPerDay} signed journeys reached for this commuter.`, carbon, checks };
+  if (demo && store.countToday(demoKey, day) >= config.demoMaxTripsPerWallet) {
+    return { status: "rate-limited", httpStatus: 429, reason: `Daily limit of ${config.demoMaxTripsPerWallet} testnet demo trips reached for this wallet.`, carbon, checks };
+  }
 
   try {
     const [oracleOnChain, processed, nonce] = await Promise.all([reader.oracleSigner(), reader.isTripProcessed(tripId), reader.nonceOf(req.commuter)]);
@@ -165,9 +177,11 @@ export async function evaluateAndSign(req: SignRequest, deps: SignDeps): Promise
     const payload = { commuter: req.commuter, tripId, mode: carbon.contract.mode, distanceMeters: carbon.distanceMeters, co2AvoidedGrams: carbon.co2AvoidedGrams, nonce, deadline: BigInt(deadline) };
     const signature = await signTripPayload({ privateKey: config.oracleKey, chainId: config.chainId, verifyingContract: config.contract, payload });
     store.record(req.commuter, day, tripId);
+    if (demo) store.record(demoKey, day, tripId);
     return {
       status: "signed",
       httpStatus: 200,
+      demo,
       signed: {
         tripId,
         mode: payload.mode,
@@ -181,6 +195,7 @@ export async function evaluateAndSign(req: SignRequest, deps: SignDeps): Promise
         contract: config.contract,
         chainId: config.chainId,
         signedAt: nowMs,
+        ...(demo ? { demo: true as const } : {}),
       },
       carbon,
       distanceKmUsed: distanceKm,
