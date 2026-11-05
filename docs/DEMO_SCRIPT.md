@@ -77,9 +77,34 @@ Replace the first part of part 5 (down to "hide it") with the text below, and pu
 > Here is a real journey. The verifier signs it. *(pause)* MetaMask asks me to confirm. This is the transaction hash, this is the block, and
 > this is the reward minted to my wallet.
 
+### Recording a real transaction without driving: the Testnet Demo Trip
+
+Use this if you cannot take a real-GPS trip. The transaction is real; the trip is not, and the video must say so.
+
+**Setup (once, locally; nothing goes in chat or in a commit).**
+
+1. In `.env.local` put the real values from `.env.example`, your own `ORACLE_PRIVATE_KEY` (the key of the contract's oracle signer), `DEMO_SIGNING=true` and `NEXT_PUBLIC_DEMO_SIGNING=true`.
+2. `npm run dev`, then open http://localhost:3000/api/status. It must say `"mode":"LIVE"` and `"demoSigning":true`.
+3. MetaMask on Portal V3 with a funded wallet (about 35 tPOT per call). Do not use the same wallet you show a balance for in other videos.
+4. Do one dry run first, so you know it works before the camera is on.
+
+**On screen (about 45 seconds).**
+
+1. Sign in with MetaMask, tick Metro, Save transport profile, go to Capture trip.
+2. Point at the **Demo run (1 km+)** card and read its first line aloud. Press it. The banner **TESTNET DEMO TRIP** appears; leave it in frame.
+3. The trip stops itself at about 1.2 km and verifies itself. Press **Sign & record on-chain (testnet demo)**, confirm the two MetaMask prompts (a free signature, then the transaction).
+4. Show **CONFIRMED ON PORTAL**, the transaction hash, the block number and the minted $MEV. Then open the landing page and show the row in **Recent on-chain activity**.
+
+> This is a testnet demo trip: the distance is synthetic, and the app labels it that way. *(pause)* But the transaction is real. The verifier
+> recomputed the trip, signed it, and my own wallet sent it to the contract on Portal V3. Here is the hash, here is the block, and here is the
+> reward the contract minted. It also shows up here, read straight from the contract's logs.
+
+**Afterwards.** Paste the transaction hash into `docs/SUBMISSION_ANSWERS.md` and the README status table, with the words "testnet demo trip". Turn `DEMO_SIGNING` off again.
+
 ### Things not to say
 
-* That any $MEV was minted, or that the public demo sends transactions. It does not.
+* That any $MEV was minted, or that the public demo sends transactions, until a real transaction hash exists. The public demo does not send them.
+* That a testnet demo trip was real travel or GPS-verified. It was neither; say "synthetic".
 * That $MEV is a carbon credit. It is a prototype reward token.
 * That the project uses Portal's WASM or cross-chain features. It uses the EVM layer only.
 * That the community analytics are real. They are synthetic and labelled.
