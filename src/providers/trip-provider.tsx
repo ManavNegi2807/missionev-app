@@ -17,6 +17,7 @@ import { calculateJourney, JourneyInputError } from "@/lib/carbon/emissionsEngin
 import { mevNumber, mintedInReceipt, readCommuterOnChain, readNonce, sendRecordCommute, waitForReceipt } from "@/lib/contract/client";
 import { CONTRACT, isContractAddress } from "@/lib/contract/config";
 import { PORTAL_V3 } from "@/lib/chain";
+import { DEMO_RUN_KM, demoSigningUi } from "@/lib/oracle/demo";
 import { oracleRequestMessage } from "@/lib/oracle/walletProof";
 import { previewReward, streakAfterTrip } from "@/lib/carbon/rewardPreview";
 import type { CarbonResult } from "@/lib/carbon/types";
@@ -60,6 +61,8 @@ export interface TripSetup {
   vehicleId: string | null;
   /** Ride-hail receipt details and the vehicle the commuter confirmed. */
   ride: RideHailForm;
+  /** The "Demo run" path: a short synthetic trip that stops itself at ~1.2 km and, when the server allows it, is signed for the testnet. */
+  demoRun: boolean;
 }
 
 export type GpsSignal = "idle" | "requesting" | "strong" | "good" | "weak" | "poor" | "denied" | "unavailable" | "simulated";
@@ -155,6 +158,14 @@ function demoCommuterState(history: TripRecord[]) {
   return { streakDays, lastTripTimestamp };
 }
 
+/**
+ * Whether a verified trip may take the LIVE (oracle signature + wallet transaction) path. Real GPS trips always may. A synthetic
+ * "demo run" may only when this deployment offers the demo path in the UI AND the server says it signs demo trips.
+ * The server re-checks both: this only decides what the interface offers.
+ */
+const sourceMayGoLive = (rec: Pick<TripRecord, "source" | "demoRun">, server: { demoSigning?: boolean } | null) =>
+  rec.source === "gps" || (rec.demoRun === true && rec.source === "simulated" && demoSigningUi() && server?.demoSigning === true);
+
 const rpcCode = (e: unknown): number | undefined => (typeof e === "object" && e !== null && "code" in e ? Number((e as { code: unknown }).code) : undefined);
 
 interface TripContextValue {
@@ -174,6 +185,8 @@ interface TripContextValue {
   history: TripRecord[];
   latest: TripRecord | null;
   start(override?: Partial<TripSetup>): Promise<void>;
+  /** One click: a synthetic trip of the chosen mode that stops itself at ~1.2 km, then verifies itself. Needs the demo path to be offered. */
+  startDemoRun(): Promise<void>;
   pause(): void;
   resume(): void;
   stop(): void;
@@ -201,7 +214,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const history = useMemo(() => storedHistory.filter(isCurrentTrip), [storedHistory]);
 
   const [status, setStatus] = useState<TripStatus>("IDLE");
-  const [chosen, setSetupState] = useState<TripSetup>({ source: "gps", routeId: DEMO_ROUTES[0].id, scenario: "clean", mode: "metro", vehicleId: null, ride: EMPTY_RIDE });
+  const [chosen, setSetupState] = useState<TripSetup>({ source: "gps", routeId: DEMO_ROUTES[0].id, scenario: "clean", mode: "metro", vehicleId: null, ride: EMPTY_RIDE, demoRun: false });
   const setup = chosen;
   const transport = registration?.transport ?? null;
   const selection = useMemo(() => resolveSelection(setup, transport), [setup, transport]);
@@ -282,7 +295,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const start = useCallback(
     async (override?: Partial<TripSetup>) => {
       if (statusRef.current !== "IDLE" || startingRef.current || !registrationRef.current) return;
-      const s = { ...setupRef.current, ...override };
+      const s = { ...setupRef.current, ...override, demoRun: override?.demoRun === true };
       const sel = resolveSelection(s, registrationRef.current.transport);
       if (sel.blocked) {
         setNotice({ tone: "warn", text: sel.blocked });
@@ -343,6 +356,21 @@ export function TripProvider({ children }: { children: ReactNode }) {
     [begin],
   );
 
+  const startDemoRun = useCallback(async () => {
+    if (statusRef.current !== "IDLE") return;
+    const w = walletRef.current;
+    const server = await loadStatus();
+    if (!demoSigningUi() || server?.mode !== "LIVE" || server.demoSigning !== true) {
+      setNotice({ tone: "warn", text: "This deployment doesn't offer testnet demo trips. Record a real GPS trip instead, or run a simulated trip that stays in this browser." });
+      return;
+    }
+    if (w.mode !== "browser" || !w.address || !w.onExpectedChain) {
+      setNotice({ tone: "warn", text: `Connect your wallet on ${PORTAL_V3.name} first: a testnet demo trip is recorded from your own wallet.` });
+      return;
+    }
+    await start({ source: "simulated", scenario: "clean", routeId: DEMO_ROUTES[0].id, demoRun: true });
+  }, [start]);
+
   const pause = useCallback(() => {
     fire("PAUSE");
   }, [fire]);
@@ -370,6 +398,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
       source: s.source,
       mode: s.mode,
       isSimulated: s.source === "simulated",
+      demoRun: s.demoRun && s.source === "simulated",
       scenario: s.scenario,
       routeId: s.source === "simulated" ? s.routeId : null,
       routeName: s.source === "simulated" ? getRoute(s.routeId).name : null,
@@ -484,7 +513,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     // DEMO or LIVE is decided once, here: real GPS + a real wallet on Portal V3 + a fully configured server = LIVE.
     const w = walletRef.current;
     const server = await loadStatus();
-    const liveMode = ok && rec.source === "gps" && server?.mode === "LIVE" && w.mode === "browser" && w.onExpectedChain && Boolean(w.address) && isContractAddress(CONTRACT.address) && Boolean(carbon?.reward.eligible);
+    const liveMode = ok && sourceMayGoLive(rec, server) && server?.mode === "LIVE" && w.mode === "browser" && w.onExpectedChain && Boolean(w.address) && isContractAddress(CONTRACT.address) && Boolean(carbon?.reward.eligible);
     const applicationMode: ApplicationMode = liveMode ? "LIVE" : "DEMO";
 
     // What the contract's reward formula would mint, from the commuter's real streak (LIVE) or this tab's demo history.
@@ -527,6 +556,8 @@ export function TripProvider({ children }: { children: ReactNode }) {
     setVerify(INITIAL_VERIFY);
     setGps({ signal: "idle", message: null });
     setNotice(null);
+    setupRef.current = { ...setupRef.current, demoRun: false };
+    setSetupState((s) => (s.demoRun ? { ...s, demoRun: false } : s));
   }, [fire, pushLive]);
 
   const clearHistory = useCallback(() => historyStore.set([]), []);
@@ -649,7 +680,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     void (async () => {
       const server = await loadStatus();
-      const liveNow = rec.source === "gps" && server?.mode === "LIVE" && wallet.mode === "browser" && wallet.onExpectedChain && Boolean(wallet.address) && isContractAddress(CONTRACT.address);
+      const liveNow = sourceMayGoLive(rec, server) && server?.mode === "LIVE" && wallet.mode === "browser" && wallet.onExpectedChain && Boolean(wallet.address) && isContractAddress(CONTRACT.address);
       const wanted: ApplicationMode = liveNow ? "LIVE" : "DEMO";
       if (cancelled || recordRef.current?.id !== rec.id) return;
       const sameWallet = !liveNow || rec.wallet.address.toLowerCase() === wallet.address?.toLowerCase();
@@ -715,7 +746,12 @@ export function TripProvider({ children }: { children: ReactNode }) {
         next.currentSpeedKmh = speed;
         next.maxSpeedKmh = Math.max(l.maxSpeedKmh, speed);
         pushLive(next);
-        if (progress >= route.lengthKm) {
+        if (s.demoRun && next.distanceKm >= DEMO_RUN_KM) {
+          setNotice({ tone: "cyan", text: `Demo run complete: the synthetic trip stopped itself at ${next.distanceKm.toFixed(2)} km.` });
+          stop();
+          // A demo run verifies itself the moment it stops, so the path is: choose mode, Demo run, sign and record.
+          void verifyTrip();
+        } else if (progress >= route.lengthKm) {
           setNotice({ tone: "cyan", text: "The simulated vehicle reached its destination, so the trip was stopped." });
           stop();
         }
@@ -724,7 +760,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
       pushLive(next);
     }, TICK_MS);
     return () => clearInterval(id);
-  }, [status, pushLive, stop]);
+  }, [status, pushLive, stop, verifyTrip]);
 
   // Real GPS watch — only exists while RECORDING a GPS trip (permission was already granted by Start).
   useEffect(() => {
@@ -802,6 +838,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
       history,
       latest: history[0] ?? null,
       start,
+      startDemoRun,
       pause,
       resume,
       stop,
@@ -812,7 +849,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
       requestSignature,
       submitOnChain,
     }),
-    [status, setup, setSetup, setRide, selection, gps, live, record, verify, notice, history, start, pause, resume, stop, verifyTrip, reset, clearHistory, claimDemo, requestSignature, submitOnChain],
+    [status, setup, setSetup, setRide, selection, gps, live, record, verify, notice, history, start, startDemoRun, pause, resume, stop, verifyTrip, reset, clearHistory, claimDemo, requestSignature, submitOnChain],
   );
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;

@@ -10,6 +10,10 @@ import type { RideHailInfo, TripVehicle } from "@/lib/trip/types";
 import type { ChainReader } from "@/server/chainReader";
 import type { ServerConfig } from "@/server/config";
 import { createMemoryStore, evaluateAndSign, parseSignRequest, type SignRequest } from "@/server/signService";
+import { DEMO_RUN_KM } from "@/lib/oracle/demo";
+import { DEMO_ROUTES } from "@/lib/trip/demo-routes";
+import { haversineKm } from "@/lib/trip/geo";
+import { SIM_SCALE, seedFromId, simSample, simSpeedKmh } from "@/lib/trip/simulator";
 import { MISSIONEV_ABI, artifact, createChain, type Chain } from "./helpers/evm";
 
 const oracleKey = generatePrivateKey();
@@ -296,6 +300,40 @@ describe("testnet demo trips (DEMO_SIGNING)", () => {
     const w2 = privateKeyToAccount(generatePrivateKey());
     expect((await evaluateAndSign(await demoReq(daily, w2), daily.deps)).status).toBe("signed");
     expect(await evaluateAndSign(await demoReq(daily, w2), daily.deps)).toMatchObject({ status: "rate-limited", reason: expect.stringContaining("Daily limit of 1 signed") });
+  });
+
+  it("the in-app Demo run's own simulated samples (as the browser produces and rounds them) pass the oracle for every rewardable mode", async () => {
+    const e = await env({ demoSigning: true });
+    const route = DEMO_ROUTES[0];
+    const run = (cls: "car" | "metro" | "ebus" | "active", id: string) => {
+      const seed = seedFromId(id);
+      const startedAt = e.chain.now * 1000;
+      const out: Array<[number, number, number, number]> = [];
+      const push = (s: { lat: number; lng: number; t: number; speedKmh: number }) => out.push([Math.round(s.lat * 1e6) / 1e6, Math.round(s.lng * 1e6) / 1e6, s.t, Math.round(s.speedKmh * 10) / 10]);
+      let first = simSample({ route, progressKm: 0, tMs: startedAt, seed, index: 0, scenario: "clean", prevT: null, speedKmh: 0 });
+      const clientSamples = [first];
+      push(first);
+      let progress = 0, simSec = 0, km = 0;
+      while (km < DEMO_RUN_KM) {
+        const dtSim = (250 / 1000) * SIM_SCALE; // one 250 ms ticker step
+        const speed = simSpeedKmh(cls, seed, progress, route.lengthKm);
+        progress += (speed * dtSim) / 3600;
+        const s = simSample({ route, progressKm: progress, tMs: startedAt + (simSec + dtSim) * 1000, seed, index: clientSamples.length, scenario: "clean", prevT: first.t, speedKmh: speed });
+        km += haversineKm(first, s);
+        simSec += dtSim;
+        clientSamples.push(s);
+        push(s);
+        first = s;
+      }
+      return { samples: out, startedAt, endedAt: startedAt + simSec * 1000, durationSec: simSec, distanceKm: km };
+    };
+    for (const [cls, mode, vehicle] of [["metro", "metro", null], ["ebus", "ebus", null], ["active", "active", null], ["car", "private_ev_car", veh(evCar)]] as const) {
+      const t = run(cls, `trip_demo_${cls}`);
+      const out = await evaluateAndSign(await request(e, undefined, { source: "simulated", mode, vehicle, ...t }), e.deps);
+      if (out.status !== "signed") throw new Error(`${mode}: ${out.status}: ${out.reason}`);
+      expect(out.demo).toBe(true);
+      expect(out.signed.distanceMeters).toBeGreaterThanOrEqual(1000);
+    }
   });
 
   it("reads DEMO_SIGNING from the environment: off unless explicitly true, and only reported as available when LIVE", async () => {

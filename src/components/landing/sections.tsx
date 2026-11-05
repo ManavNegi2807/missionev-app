@@ -25,6 +25,7 @@ import { CopyButton } from "./copy-button";
 import { CountUp } from "./count-up";
 import { LaunchLink } from "./launch-link";
 import { LiveChain } from "./live-chain";
+import { RecentActivity } from "./recent-activity";
 import { Magnetic } from "./magnetic";
 import { Reveal } from "./reveal";
 import { SpotlightCard } from "./spotlight-card";
@@ -189,7 +190,7 @@ export function TrySection() {
 
 /* ---------------- inside the app ---------------- */
 const SCREENS = [
-  { n: "01", icon: Wallet, title: "Sign-in & profile", text: "Connect MetaMask and say how you usually commute. Ten modes; vehicles are only a profile." },
+  { n: "01", icon: Wallet, title: "Sign-in & profile", text: "Connect MetaMask and say how you usually commute. Nine journey modes (plus an \"other\" that can't be calculated); vehicles are only a profile." },
   { n: "02", icon: MapPin, title: "Capture trip", text: "A live GPS map, four verification checks, and a carbon comparison with its formula and sources." },
   { n: "03", icon: Gift, title: "Rewards", text: "Your $MEV balance, a simulated redemption catalogue and your on-chain activity." },
   { n: "04", icon: BarChart3, title: "Analytics", text: "Emissions, mode share and a leaderboard. Community data is synthetic, and says so." },
@@ -295,6 +296,10 @@ export function PortalSection() {
 
       <Reveal className="mt-5">
         <LiveChain />
+      </Reveal>
+
+      <Reveal className="mt-5">
+        <RecentActivity />
       </Reveal>
     </section>
   );

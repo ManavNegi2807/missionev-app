@@ -32,7 +32,7 @@ export function Hero() {
               <span className="lp-ping absolute inline-flex size-full rounded-full bg-lime opacity-60" />
               <span className="relative inline-flex size-2 rounded-full bg-lime" />
             </span>
-            Live on Portal V3 testnet
+            Contract live on Portal V3 testnet
           </p>
 
           <h1 id="hero-title" className="mt-6 max-w-2xl text-[2.9rem] leading-[1.02] font-semibold tracking-tight text-balance sm:text-6xl lg:text-[4.4rem]">

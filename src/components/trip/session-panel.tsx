@@ -7,12 +7,16 @@ import { SelectField } from "@/components/ui/fields";
 import { Alert, Badge, Button, Panel, PanelHeader } from "@/components/ui/primitives";
 import type { JourneyMode } from "@/lib/carbon/types";
 import { cn } from "@/lib/format";
+import { useIntegrationStatus } from "@/lib/api/client";
+import { PORTAL_V3 } from "@/lib/chain";
+import { DEMO_MIN_DISTANCE_M, demoSigningUi } from "@/lib/oracle/demo";
 import { DEMO_ROUTES } from "@/lib/trip/demo-routes";
 import { TRAVEL_LABEL, isPrivateMode } from "@/lib/trip/travel";
 import type { Scenario, TripSource, TripStatus } from "@/lib/trip/types";
 import { vehicleLabel, vehiclesForJourney, type RegisteredVehicle } from "@/lib/transport/profile";
 import { useOnboarding } from "@/providers/onboarding-provider";
 import { useTrip } from "@/providers/trip-provider";
+import { useWallet } from "@/providers/wallet-provider";
 import { RideHailSection } from "./ride-hail-section";
 
 const STATES: Array<{ id: TripStatus | "RESULT"; label: string }> = [
@@ -44,7 +48,11 @@ const TILES: Array<{ id: string; label: string; icon: React.ReactNode; modes: Jo
 ];
 
 export function SessionPanel() {
-  const { status, setup, setSetup, selection, notice, dismissNotice, start, gps } = useTrip();
+  const { status, setup, setSetup, selection, notice, dismissNotice, start, startDemoRun, gps } = useTrip();
+  const wallet = useWallet();
+  const { status: server } = useIntegrationStatus();
+  // Offered only when this deployment shows the path (public flag), the server says it signs demo trips, and a real wallet is connected.
+  const demoOffered = demoSigningUi() && server?.mode === "LIVE" && server.demoSigning === true && wallet.mode === "browser";
   const { registration } = useOnboarding();
   const idle = status === "IDLE";
   const transport = registration?.transport ?? null;
@@ -176,6 +184,29 @@ export function SessionPanel() {
 
           {setup.mode === "ride_hail" && <RideHailSection disabled={!idle} />}
         </div>
+
+        {demoOffered && (
+          <div className="space-y-3 rounded-xl border border-warn/40 bg-warn/[0.06] p-3.5" data-demo-run-card>
+            <p className="flex items-center gap-2 font-mono text-[11px] tracking-[0.14em] text-warn uppercase">
+              <FlaskConical aria-hidden className="size-4" /> Testnet demo run
+            </p>
+            <p className="text-xs leading-relaxed text-muted">
+              Not real travel. Pick how you &quot;travelled&quot; above, and a synthetic trip of {DEMO_MIN_DISTANCE_M / 1000} km or more runs in seconds on a ×40 clock, verifies itself, and can then be recorded on {PORTAL_V3.shortName} from your own wallet.
+              The transaction is real; the trip is not. Rewardable modes only (EV, metro, e-bus, walking or cycling).
+            </p>
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
+              disabled={!idle || !wallet.onExpectedChain || Boolean(selection.blocked)}
+              icon={<FlaskConical aria-hidden className="size-4" />}
+              onClick={() => void startDemoRun()}
+            >
+              Demo run (1 km+)
+            </Button>
+            {!wallet.onExpectedChain && <p className="text-xs text-warn">Switch your wallet to {PORTAL_V3.name} first.</p>}
+          </div>
+        )}
 
         <div className="space-y-3">
           <p className="section-label">Data source</p>

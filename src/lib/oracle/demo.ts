@@ -12,7 +12,9 @@ export const DEMO_RUN_KM = 1.2;
 /** Prefix hashed into a demo trip's id, so demo trips are distinguishable off-chain (the contract only sees an opaque bytes32). */
 export const DEMO_TRIP_ID_PREFIX = "missionev-demo:";
 
-export const DEMO_BANNER = "TESTNET DEMO TRIP: synthetic distance, not GPS-verified. The transaction is real; the trip is not.";
+export const DEMO_BANNER_TITLE = "TESTNET DEMO TRIP";
+export const DEMO_BANNER_TEXT = "Synthetic distance, not GPS-verified. The transaction is real; the trip is not.";
+export const DEMO_BANNER = `${DEMO_BANNER_TITLE}: ${DEMO_BANNER_TEXT}`;
 export const DEMO_BADGE = "DEMO · ON-CHAIN";
 
 /** Public (UI-only) flag. Never trusted by the server. */

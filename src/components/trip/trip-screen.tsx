@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, FlaskConical, Lock } from "lucide-react";
 import { Alert } from "@/components/ui/primitives";
+import { DEMO_BANNER_TEXT, DEMO_BANNER_TITLE } from "@/lib/oracle/demo";
 import { useOnboarding } from "@/providers/onboarding-provider";
+import { useTrip } from "@/providers/trip-provider";
 import { ControlsBar } from "./controls-bar";
 import { EmissionsCard } from "./emissions-card";
 import { KpiGrid } from "./kpi-grid";
@@ -18,6 +20,8 @@ import { VerificationEngine } from "./verification-engine";
 
 export function TripScreen() {
   const { ready, isRegistered } = useOnboarding();
+  const { setup, record } = useTrip();
+  const demoTrip = setup.demoRun || record?.demoRun === true;
 
   return (
     <div className="space-y-6">
@@ -32,6 +36,12 @@ export function TripScreen() {
       </section>
 
       <TripPipeline />
+
+      {demoTrip && (
+        <Alert role="status" tone="warn" icon={<FlaskConical aria-hidden className="size-4" />} title={DEMO_BANNER_TITLE}>
+          <span data-demo-banner>{DEMO_BANNER_TEXT}</span>
+        </Alert>
+      )}
 
       {ready && !isRegistered ? (
         <Alert

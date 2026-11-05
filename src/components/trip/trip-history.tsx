@@ -4,6 +4,7 @@ import { mevNumber } from "@/lib/contract/client";
 import { Trash2 } from "lucide-react";
 import { Badge, Button, Panel, PanelHeader } from "@/components/ui/primitives";
 import { formatDuration } from "@/lib/format";
+import { DEMO_BADGE } from "@/lib/oracle/demo";
 import { useTrip } from "@/providers/trip-provider";
 
 export function TripHistory() {
@@ -32,7 +33,7 @@ export function TripHistory() {
             <li key={t.id} className="grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[1.4fr_1fr_1fr_1fr_auto] sm:px-6">
               <div className="min-w-0">
                 <p className="truncate font-mono text-xs text-fg">{t.id}</p>
-                <p className="truncate text-[11px] text-muted">{t.routeName ?? "Browser GPS"}</p>
+                <p className="truncate text-[11px] text-muted">{t.demoRun ? "Synthetic demo trip · " : ""}{t.routeName ?? "Browser GPS"}</p>
               </div>
               <p className="text-right font-mono text-xs sm:text-left">
                 {t.distanceKm.toFixed(2)} km <span className="block text-[11px] text-muted">{formatDuration(t.durationSec)}</span>
@@ -44,9 +45,9 @@ export function TripHistory() {
               <p className="text-right font-mono text-xs sm:text-left">{t.verification?.trust.assigned ? `${t.verification.trust.tier} tier` : "Not verified"}</p>
               <div className="col-span-2 flex flex-wrap gap-1.5 sm:col-span-1 sm:justify-end">
                 <Badge tone={t.status === "VERIFIED" ? "ok" : "err"}>{t.status}</Badge>
-                {t.isSimulated && <Badge tone="warn">Demo</Badge>}
+                {t.isSimulated && !(t.demoRun && t.settlement.phase === "confirmed") && <Badge tone="warn">Demo</Badge>}
                 {t.settlement.phase === "demo-credited" && <Badge tone="warn">Demo credit</Badge>}
-                {t.settlement.phase === "confirmed" && <Badge tone="ok">On-chain</Badge>}
+                {t.settlement.phase === "confirmed" && (t.demoRun ? <Badge tone="warn">{DEMO_BADGE}</Badge> : <Badge tone="ok">On-chain</Badge>)}
               </div>
             </li>
           ))}

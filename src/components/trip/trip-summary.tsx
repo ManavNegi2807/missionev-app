@@ -53,7 +53,7 @@ export function TripSummary() {
               <KV label="Trip ID" mono>
                 {record.id}
               </KV>
-              <KV label="Source">{record.isSimulated ? "Simulated (DEMO)" : "Browser GPS"}</KV>
+              <KV label="Source">{record.demoRun ? "Synthetic (testnet demo trip)" : record.isSimulated ? "Simulated (DEMO)" : "Browser GPS"}</KV>
               <KV label="Distance" mono>
                 {record.distanceKm.toFixed(2)} km
               </KV>
@@ -74,7 +74,7 @@ export function TripSummary() {
             <Sparkline values={record.speedProfile} />
             <p className="text-xs leading-relaxed text-muted">
               {record.isSimulated
-                ? "Simulated trip: durations use a ×40 simulated clock; none of these readings came from a GPS receiver."
+                ? `${record.demoRun ? "Testnet demo trip: not real travel. " : "Simulated trip: "}durations use a ×40 simulated clock; none of these readings came from a GPS receiver.`
                 : "Only coordinates rounded to ~110 m and a speed profile are kept in session history; the raw trail stays in this tab."}
             </p>
           </div>

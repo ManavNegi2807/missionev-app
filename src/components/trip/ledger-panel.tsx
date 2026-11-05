@@ -6,6 +6,7 @@ import { Alert, Badge, Button, KV, Panel } from "@/components/ui/primitives";
 import { useIntegrationStatus } from "@/lib/api/client";
 import { PORTAL_V3 } from "@/lib/chain";
 import { CONTRACT, contractStatus } from "@/lib/contract/config";
+import { DEMO_BANNER_TEXT, DEMO_BANNER_TITLE, demoSigningUi } from "@/lib/oracle/demo";
 import { formatMevWei } from "@/lib/contract/client";
 import { cn, shortAddress } from "@/lib/format";
 import { formatNative } from "@/lib/rewards/chain";
@@ -60,6 +61,7 @@ export function LedgerPanel() {
   const verified = status === "VERIFIED" && Boolean(carbon);
   const eligible = Boolean(carbon?.reward.eligible);
   const live = s?.applicationMode === "LIVE";
+  const demoTrip = record?.demoRun === true;
   const wrongChain = wallet.isConnected && !wallet.isDemo && !wallet.onExpectedChain;
   const real = wallet.mode === "browser";
   const address = record?.wallet.address ?? wallet.address;
@@ -81,7 +83,7 @@ export function LedgerPanel() {
           </h2>
         </div>
         <Badge tone={live ? "ok" : "warn"} dot>
-          {!s || s.phase === "not-started" ? (live ? "Live" : "Demo") : live ? "Live · on-chain flow" : "Demo · not on-chain"}
+          {!s || s.phase === "not-started" ? (live ? "Live" : "Demo") : live ? (demoTrip ? "Testnet demo · on-chain flow" : "Live · on-chain flow") : "Demo · not on-chain"}
         </Badge>
       </header>
 
@@ -154,7 +156,7 @@ export function LedgerPanel() {
               }
             >
               {record?.source === "simulated"
-                ? "Simulated trips are demo data and are never signed or sent to the chain."
+                ? `Simulated trips are demo data and are never signed or sent to the chain.${demoSigningUi() && !record.demoRun ? " The separate Demo run button, with a wallet connected, makes a labelled testnet demo trip that can be." : ""}`
                 : server?.mode === "LIVE"
                   ? `The server is set up for the real chain. Connect a wallet on ${PORTAL_V3.name} to record this journey: you sign a free request, the oracle verifies it, then you send the transaction. Until then this credit exists only in this browser tab.`
                   : "Recording for real needs a fully configured server (contract address, RPC URL and oracle key) and a wallet connected on Portal V3. Until then this credit exists only in this browser tab."}
@@ -174,6 +176,11 @@ export function LedgerPanel() {
 
         {verified && eligible && live && (
           <div className="space-y-4">
+            {demoTrip && (
+              <Alert tone="warn" icon={<FlaskConical aria-hidden className="size-4" />} title={DEMO_BANNER_TITLE}>
+                {DEMO_BANNER_TEXT}
+              </Alert>
+            )}
             {!real || !wallet.address ? (
               <Alert tone="cyan" icon={<Wallet aria-hidden className="size-4" />} title="Connect your wallet" actions={<Button size="sm" variant="primary" loading={wallet.connecting} onClick={() => void wallet.connect()}>Connect wallet</Button>}>
                 The contract credits whoever sends the transaction, so recording happens from your own wallet.
@@ -186,7 +193,7 @@ export function LedgerPanel() {
               </Step>
               <Step n={2} title="Oracle verification & EIP-712 signature" state={oracleState}>
                 {s?.oracle.status === "requesting" && "Waiting for your wallet's free signature, then the oracle re-verifies the trip and recalculates the emissions itself…"}
-                {s?.oracle.status === "signed" && "The oracle recalculated this journey and signed the values below. It signs what it derived, never numbers from your browser."}
+                {s?.oracle.status === "signed" && (demoTrip ? "The oracle recalculated this synthetic journey from its samples and signed the values below. It signs what it derived, never numbers from your browser." : "The oracle recalculated this journey and signed the values below. It signs what it derived, never numbers from your browser.")}
                 {(s?.oracle.status === "refused" || s?.oracle.status === "error" || s?.oracle.status === "unavailable") && <span className="text-err">{s.oracle.reason}</span>}
                 {s?.oracle.status === "not-requested" && "Not requested yet. Your wallet signs a free message so the oracle knows the request is yours."}
               </Step>
@@ -250,7 +257,7 @@ export function LedgerPanel() {
             {s?.phase === "confirmed" && s.onchain && (
               <div role="status" className="space-y-2 rounded-xl border border-ok/40 bg-ok/[0.06] p-4">
                 <p className="flex items-center gap-2 font-mono text-[11px] tracking-[0.14em] text-ok">
-                  <ShieldCheck aria-hidden className="size-4" /> CONFIRMED ON PORTAL · READ BACK FROM THE CONTRACT
+                  <ShieldCheck aria-hidden className="size-4" /> CONFIRMED ON PORTAL · READ BACK FROM THE CONTRACT{demoTrip && " · TESTNET DEMO TRIP, NOT REAL TRAVEL"}
                 </p>
                 <dl className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
                   <KV label="Minted" mono>
@@ -283,12 +290,14 @@ export function LedgerPanel() {
                       setBusy("sign");
                       try {
                         await requestSignature();
+                        // A demo run is one button: sign, then straight on to the wallet transaction.
+                        if (demoTrip) await submitOnChain();
                       } finally {
                         setBusy(null);
                       }
                     }}
                   >
-                    {signed && expired ? "Request a fresh signature" : "Verify & get oracle signature"}
+                    {signed && expired ? "Request a fresh signature" : demoTrip ? "Sign & record on-chain (testnet demo)" : "Verify & get oracle signature"}
                   </Button>
                 )}
                 {signed && !expired && s?.oracle.status === "signed" && (
